@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IDX Smart Screener — Multi-Stock Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f080c;
+      --surface: #1a0f16;
+      --surface2: #25161f;
+      --border: rgba(255, 99, 219, 0.18);
+      --accent: #ff63db;
+      --accent2: #ff9cf0;
+      --green: #00e676;
+      --red: #ff4d6d;
+      --gold: #ffd700;
+      --text: #fceef5;
+      --muted: #a68498;
+      --radius: 14px;
+      --glow: 0 0 28px rgba(255, 99, 219, 0.22);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    .sidebar .logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sidebar .logo span {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--muted);
+      -webkit-text-fill-color: var(--muted);
+    }
+
+    .btn-analyze {
+      background: linear-gradient(135deg, var(--accent), #ff66e5);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-analyze:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 99, 219, 0.4);
+    }
+
+    .sidebar-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 4px 0;
+    }
+
+    .sidebar-info {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── Main Content ── */
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      padding: 28px 28px 48px;
+      min-width: 0;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #25161f 0%, #301a27 50%, #25161f 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-title .accent {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Metric Cards ── */
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 20px 16px;
+      position: relative;
+    }
+
+    .card .card-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .card .card-value {
+      font-size: 1.65rem;
+      font-weight: 800;
+      margin-top: 6px;
+      line-height: 1;
+    }
+
+    .card .card-sub {
+      font-size: 0.73rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .card.bull {
+      border-color: rgba(0, 230, 118, 0.35);
+    }
+
+    .card.bull .card-value {
+      color: var(--green);
+    }
+
+    .card.bear {
+      border-color: rgba(255, 77, 109, 0.35);
+    }
+
+    .card.bear .card-value {
+      color: var(--red);
+    }
+
+    .bull-bar-wrap {
+      margin-top: 10px;
+      background: var(--surface2);
+      border-radius: 99px;
+      height: 7px;
+      overflow: hidden;
+    }
+
+    .bull-bar {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s ease;
+      background: linear-gradient(90deg, #ff4d6d, #ffd700, #00e676);
+    }
+
+    /* ── Screener Table ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 28px 0 14px;
+    }
+
+    .section-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .section-header .pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: rgba(99, 120, 255, 0.18);
+      color: var(--accent);
+      border: 1px solid rgba(99, 120, 255, 0.3);
+      border-radius: 99px;
+      padding: 2px 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th {
+      padding: 12px 16px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface2);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(99, 120, 255, 0.08);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(99, 120, 255, 0.05);
+    }
+
+    .btn-view {
+      background: rgba(99, 120, 255, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(99, 120, 255, 0.4);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-view:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    .flag-chip {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 99px;
+      margin-right: 4px;
+      border: 1px solid;
+    }
+
+    .flag-Uptrend {
+      background: rgba(0, 230, 118, 0.1);
+      color: var(--green);
+      border-color: rgba(0, 230, 118, 0.3);
+    }
+
+    .flag-Near {
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--gold);
+      border-color: rgba(255, 215, 0, 0.3);
+    }
+
+    .flag-High {
+      background: rgba(99, 120, 255, 0.1);
+      color: var(--accent);
+      border-color: rgba(99, 120, 255, 0.3);
+    }
+
+    /* ── Detail Panel ── */
+    #detailPanel {
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+
+    .detailed-header {
+      margin-top: 40px;
+      border-top: 1px solid var(--border);
+      padding-top: 28px;
+    }
+
+    .trade-plan-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .tp-item .tp-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.07em;
+    }
+
+    .tp-item .tp-val {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+
+    .tp-item.entry .tp-val {
+      color: var(--accent);
+    }
+
+    .tp-item.sl .tp-val {
+      color: var(--red);
+    }
+
+    .tp-item.tp .tp-val {
+      color: var(--green);
+    }
+
+    .signal-box {
+      background: rgba(0, 212, 170, 0.07);
+      border: 1px solid rgba(0, 212, 170, 0.4);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .signal-box .sig-icon {
+      font-size: 1.8rem;
+    }
+
+    .sig-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .sig-main {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .chart-full {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .chart-title {
+      padding: 12px 18px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ── Loaders ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <aside class="sidebar">
+    <div>
+      <div class="logo">IDX SCREENER</span></div>
+    </div>
+    <hr class="sidebar-divider" />
+    <button class="btn-analyze" id="btnScan" onclick="runScreener()">🔍 SCAN MARKET (LQ45)</button>
+    <hr class="sidebar-divider" />
+    <div class="sidebar-info">
+      <div style="margin-bottom:10px"><strong>Screener Engine:</strong></div>
+      - Downloads 45 index stocks parallelly<br>
+      - Filters: Price > MA20 & Vol > 1.5Avg<br>
+      - Filters: SMC Bullish & Near POI (4H)<br>
+      - Limits GoAPI (30/day) only to top 10 matched candidates.<br>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <div class="hero-title">Market <span class="accent">Screener</span></div>
+      <div class="hero-sub">Automatically analyzes the most liquid Indonesian stocks to find immediate buying
+        opportunities.</div>
+    </div>
+
+    <div class="cards-row" id="ihsgCards">
+      <div class="card">
+        <div class="card-label">IHSG Bull Index</div>
+        <div class="card-value" id="ihsgScore">—</div>
+        <div class="bull-bar-wrap">
+          <div class="bull-bar" id="ihsgBar" style="width:0%"></div>
+        </div>
+        <div class="card-sub" id="ihsgStatus">Loading…</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Current IHSG</div>
+        <div class="card-value" id="ihsgCurrent">—</div>
+        <div class="card-sub" id="ihsgMas">MA20 · MA50 · MA200</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2>Recommended Buying Candidates</h2><span class="pill" id="scanLabel">Waiting to scan</span>
+    </div>
+
+    <div class="table-card" id="screenerTableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Price</th>
+            <th>Technical Score</th>
+            <th>Flags</th>
+            <th>Flow Signal</th>
+            <th>Acc Score</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="screenerTbody">
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 30px; color: var(--muted)">Click 'Scan Market' to begin
+              automated analysis...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail Panel -->
+    <div id="detailPanel">
+      <div class="section-header detailed-header">
+        <h2 id="detailTitle">Details: BBCA</h2>
+        <span class="pill">4H SMC Plan</span>
+      </div>
+
+      <!-- Generated dynamically on click -->
+      <div id="detailSignalBox"></div>
+      <div id="detailTradePlan"></div>
+
+      <div class="chart-full">
+        <div class="chart-title">⏱ 4-Hour Chart — Entry Structure</div>
+        <div id="chart4h">
+          <div class="loading">
+            <div class="spinner"></div>Loading chart…
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let screenerResults = [];
+
+    function fmt(num) {
+      if (num == null) return '—';
+      return num.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    }
+
+    async function loadIHSG() {
+      try {
+        const res = await fetch('/api/ihsg/');
+        const d = await res.json();
+        const score = d.score || 0;
+        document.getElementById('ihsgScore').textContent = score + '%';
+        document.getElementById('ihsgStatus').textContent = d.status || '—';
+        document.getElementById('ihsgBar').style.width = score + '%';
+        document.getElementById('ihsgCurrent').textContent = fmt(d.current);
+        document.getElementById('ihsgMas').textContent = `MA20: ${fmt(d.ma20)} · MA50: ${fmt(d.ma50)} · MA200: ${fmt(d.ma200)}`;
+      } catch (e) { console.error('IHSG err:', e); }
+    }
+
+    async function runScreener() {
+      const btn = document.getElementById('btnScan');
+      const tbody = document.getElementById('screenerTbody');
+      const label = document.getElementById('scanLabel');
+
+      btn.innerText = 'Scanning...';
+      btn.disabled = true;
+      tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div>Downloading & computing SMC for all 45 stocks. This may take ~10 seconds...</div></td></tr>';
+      label.innerText = 'SCANNING...';
+
+      try {
+        document.getElementById('detailPanel').style.display = 'none';
+
+        const res = await fetch('/api/screener/');
+        const data = await res.json();
+
+        if (data.error) {
+          tbody.innerHTML = `<tr><td colspan="7" style="color:red; text-align:center">${data.error}</td></tr>`;
+        } else {
+          screenerResults = data.candidates || [];
+          if (screenerResults.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center">No stocks matched the stringent buying criteria (Trend + Vol + SMC POI) at this time.</td></tr>`;
+          } else {
+            // Sort by Acc Score descending
+            screenerResults.sort((a, b) => {
+              const accA = (a.flow && a.flow.acc_score) || 0;
+              const accB = (b.flow && b.flow.acc_score) || 0;
+              return accB - accA;
+            });
+            renderTable(screenerResults);
+          }
+          label.innerText = `FOUND ${screenerResults.length} MATCHES`;
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red); text-align:center">Failed to fetch API. Is Django running?</td></tr>`;
+      }
+
+      btn.innerText = '🔍 SCAN MARKET (LQ45)';
+      btn.disabled = false;
+    }
+
+    function getFlagHtml(str) {
+      let cls = '';
+      if (str.includes("Uptrend")) cls = 'flag-Uptrend';
+      else if (str.includes("Near POI")) cls = 'flag-Near';
+      else if (str.includes("Vol")) cls = 'flag-High';
+      return `<span class="flag-chip ${cls}">${str}</span>`;
+    }
+
+    function renderTable(results) {
+      const tbody = document.getElementById('screenerTbody');
+      tbody.innerHTML = results.map((r, i) => {
+        const flow = r.flow || {};
+        const sigHtml = flow.eligible
+          ? `<span style="color:var(--green)">✅ ${flow.signal.substring(0, 25)}...</span>`
+          : `<span style="color:var(--muted)">😐 No strong foreign signals</span>`;
+
+        const accScore = flow.acc_score ? flow.acc_score.toFixed(1) + '%' : '—';
+        const flagsHtml = r.flags.map(getFlagHtml).join('');
+
+        return `
+      <tr>
+        <td><strong style="font-size:1.1rem; color:var(--accent2)">${r.ticker}</strong></td>
+        <td>Rp ${fmt(r.price)}</td>
+        <td><strong>${r.score}</strong> / 100</td>
+        <td>${flagsHtml}</td>
+        <td style="font-size:0.75rem">${sigHtml}</td>
+        <td><strong>${accScore}</strong></td>
+        <td><button class="btn-view" onclick="viewDetailed(${i})">View Plan</button></td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    async function viewDetailed(index) {
+      const c = screenerResults[index];
+      if (!c) return;
+
+      const panel = document.getElementById('detailPanel');
+      panel.style.display = 'block';
+      document.getElementById('detailTitle').textContent = `Details & Trade Plan: ${c.ticker}`;
+
+      // Render flow box
+      let sigCls = c.flow && c.flow.eligible ? 'style="border-color:var(--green); background:rgba(0,230,118,0.07)"' : '';
+      let sigIcon = c.flow && c.flow.eligible ? '✅' : '😐';
+      let sigMain = c.flow ? c.flow.signal : 'No broker flow data fetched for this tier.';
+
+      document.getElementById('detailSignalBox').innerHTML = `
+    <div class="signal-box" ${sigCls}>
+      <div class="sig-icon">${sigIcon}</div>
+      <div>
+        <div class="sig-label">Flow Analysis Score</div>
+        <div class="sig-main">${sigMain}</div>
+        <div style="font-size:0.8rem; color:var(--muted); margin-top:4px">Accumulation: ${c.flow && c.flow.acc_score ? c.flow.acc_score + '%' : '—'}</div>
+      </div>
+    </div>
+  `;
+
+      // Render trade plan
+      const smc = c.smc;
+      document.getElementById('detailTradePlan').innerHTML = `
+    <div class="trade-plan-box">
+      <div class="tp-item entry"><div class="tp-label">Ideal Entry (POI bounds)</div><div class="tp-val">Rp ${fmt(smc.poi_low)} - ${fmt(smc.poi_high)}</div></div>
+      <div class="tp-item sl"><div class="tp-label">Stop Loss</div><div class="tp-val">Rp ${fmt(smc.sl)}</div></div>
+      <div class="tp-item tp"><div class="tp-label">Take Profit Target</div><div class="tp-val">Rp ${fmt(smc.tp)}</div></div>
+    </div>
+  `;
+
+      // Load chart
+      document.getElementById('chart4h').innerHTML = '<div class="loading"><div class="spinner"></div>Rendering chart data…</div>';
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // We need to fetch the specific candle data for charting because screener api doesn't return massive arrays to save bandwidth
+      try {
+        const res = await fetch(`/api/stock/${c.ticker}/`);
+        const d = await res.json();
+        if (d.data_4h) renderChart('chart4h', d.data_4h, c.smc);
+      } catch (e) {
+        document.getElementById('chart4h').innerHTML = 'Error loading chart.';
+      }
+    }
+
+    function renderChart(containerId, data, smc) {
+      const dates = data.map(r => r.Date || r.date || r.Datetime);
+      const opens = data.map(r => r.Open);
+      const highs = data.map(r => r.High);
+      const lows = data.map(r => r.Low);
+      const closes = data.map(r => r.Close);
+
+      const candle = {
+        type: 'candlestick', x: dates,
+        open: opens, high: highs, low: lows, close: closes,
+        increasing: { line: { color: '#00e676' }, fillcolor: 'rgba(0,230,118,0.7)' },
+        decreasing: { line: { color: '#ff4d6d' }, fillcolor: 'rgba(255,77,109,0.7)' },
+      };
+
+      const shapes = [];
+      if (smc.bos) shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: smc.bos, y1: smc.bos, line: { color: '#00e676', width: 1, dash: 'dash' } });
+      if (smc.choch) shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: smc.choch, y1: smc.choch, line: { color: '#ff4d6d', width: 1, dash: 'dash' } });
+      if (smc.poi_low && smc.poi_high) {
+        shapes.push({
+          type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: smc.poi_low, y1: smc.poi_high,
+          fillcolor: 'rgba(99,120,255,0.15)', line: { width: 0 }, layer: 'below'
+        });
+      }
+
+      const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter', color: '#7a84a0', size: 11 },
+        xaxis: { gridcolor: 'rgba(99,120,255,0.07)', rangeslider: { visible: false } },
+        yaxis: { gridcolor: 'rgba(99,120,255,0.07)' },
+        margin: { l: 50, r: 20, t: 16, b: 40 }, height: 350, shapes: shapes
+      };
+
+      document.getElementById(containerId).innerHTML = '';
+      Plotly.newPlot(containerId, [candle], layout, { displayModeBar: false });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadIHSG);
+  </script>
+</body>
+
+</html>
