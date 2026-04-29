@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IDX Strategy Backtest — SMC + POI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f080c;
+      --surface: #1a0f16;
+      --surface2:#25161f;
+      --border:  rgba(255,99,219,0.18);
+      --accent:  #ff63db;
+      --accent2: #ff9cf0;
+      --green:   #00e676;
+      --red:     #ff4d6d;
+      --gold:    #ffd700;
+      --blue:    #4fc3f7;
+      --text:    #fceef5;
+      --muted:   #a68498;
+      --radius:  14px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px; min-height: 100vh;
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 28px 18px; display: flex; flex-direction: column; gap: 18px;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    }
+    .logo {
+      font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo span { display: block; font-size: 0.72rem; font-weight: 400; color: var(--muted); -webkit-text-fill-color: var(--muted); }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
+    .sidebar-nav a {
+      display: block; padding: 9px 12px; border-radius: 9px; font-size: 0.85rem; font-weight: 600;
+      color: var(--muted); text-decoration: none; transition: 0.15s;
+    }
+    .sidebar-nav a:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-nav a.active { background: rgba(255,99,219,0.12); color: var(--accent); }
+
+    .btn-run {
+      background: linear-gradient(135deg, var(--accent), #ff66e5);
+      color: #fff; border: none; border-radius: 10px; padding: 12px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer; width: 100%;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-run:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,99,219,0.4); }
+    .btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-force {
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; width: 100%; transition: 0.15s;
+    }
+    .btn-force:hover { border-color: var(--accent); color: var(--accent); }
+
+    .sidebar-info { font-size: 0.72rem; color: var(--muted); line-height: 1.6; }
+    .param-row { display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 5px; }
+    .param-row .pval { color: var(--accent2); font-weight: 700; }
+
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; padding: 28px 28px 60px; min-width: 0; }
+
+    .hero {
+      background: linear-gradient(135deg, #25161f 0%, #301a27 50%, #25161f 100%);
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 32px; margin-bottom: 24px;
+    }
+    .hero-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
+    .hero-title .accent { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-sub { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+    .hero-badges { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; border: 1px solid;
+    }
+    .badge.strategy { background: rgba(255,99,219,0.1); color: var(--accent); border-color: rgba(255,99,219,0.35); }
+    .badge.data     { background: rgba(79,195,247,0.1); color: var(--blue);   border-color: rgba(79,195,247,0.35); }
+    .badge.honest   { background: rgba(255,215,0,0.1);  color: var(--gold);   border-color: rgba(255,215,0,0.35); }
+
+    /* ── Metric Cards ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px;
+    }
+    .card .clabel { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+    .card .cval   { font-size: 1.55rem; font-weight: 800; margin-top: 5px; line-height: 1; }
+    .card .csub   { font-size: 0.7rem;  color: var(--muted); margin-top: 4px; }
+    .card.pos { border-color: rgba(0,230,118,0.3); }
+    .card.pos .cval { color: var(--green); }
+    .card.neg { border-color: rgba(255,77,109,0.3); }
+    .card.neg .cval { color: var(--red); }
+    .card.neu .cval { color: var(--accent2); }
+    .card.gld .cval { color: var(--gold); }
+
+    /* ── Section headers ── */
+    .section-header { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; }
+    .section-header h2 { font-size: 1.05rem; font-weight: 700; }
+    .pill {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 10px; border-radius: 99px;
+      background: rgba(99,120,255,0.18); color: var(--accent); border: 1px solid rgba(99,120,255,0.3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    /* ── Charts ── */
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 22px;
+    }
+    .chart-header {
+      padding: 12px 18px; font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border);
+      text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 8px;
+    }
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
+    @media (max-width: 1100px) { .charts-row { grid-template-columns: 1fr; } }
+
+    /* ── Table ── */
+    .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .table-toolbar {
+      padding: 12px 18px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      border-radius: 7px; padding: 5px 14px; font-size: 0.73rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+    }
+    .filter-btn:hover, .filter-btn.active { background: rgba(255,99,219,0.15); border-color: var(--accent); color: var(--accent); }
+    .tbl-wrap { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left; }
+    th {
+      padding: 10px 14px; font-size: 0.68rem; text-transform: uppercase; color: var(--muted);
+      background: var(--surface2); font-weight: 700; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; cursor: pointer;
+      user-select: none; white-space: nowrap;
+    }
+    th:hover { color: var(--accent); }
+    th .sort-arrow { margin-left: 4px; opacity: 0.4; }
+    th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+    td { padding: 10px 14px; border-bottom: 1px solid rgba(99,120,255,0.07); vertical-align: middle; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(99,120,255,0.05); }
+    .win-badge  { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.68rem; font-weight: 700; background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+    .loss-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.68rem; font-weight: 700; background: rgba(255,77,109,0.12); color: var(--red); border: 1px solid rgba(255,77,109,0.3); }
+    .flag-chip  { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 0.6rem; font-weight: 700; margin-right: 3px; border: 1px solid; }
+    .flag-Near    { background: rgba(255,215,0,0.1);   color: var(--gold);  border-color: rgba(255,215,0,0.3); }
+    .flag-Uptrend { background: rgba(0,230,118,0.1);   color: var(--green); border-color: rgba(0,230,118,0.3); }
+    .flag-High    { background: rgba(99,120,255,0.1);  color: var(--accent); border-color: rgba(99,120,255,0.3); }
+
+    /* ── Streak / stat pills ── */
+    .streak-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .streak-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 18px; min-width: 140px;
+    }
+    .streak-card .sc-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .streak-card .sc-val   { font-size: 1.1rem; font-weight: 800; margin-top: 4px; }
+
+    /* ── Loading ── */
+    #loadingOverlay {
+      display: none; position: fixed; inset: 0; background: rgba(15,8,12,0.88);
+      z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    }
+    #loadingOverlay.show { display: flex; }
+    .spinner-lg { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .loading-msg { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .loading-sub { font-size: 0.8rem; color: var(--muted); }
+    .loading-steps { font-size: 0.75rem; color: var(--muted); text-align: center; line-height: 1.8; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Initial empty state ── */
+    #emptyState { padding: 60px 0; text-align: center; color: var(--muted); }
+    #emptyState .empty-icon { font-size: 3rem; margin-bottom: 14px; }
+    #emptyState .empty-text { font-size: 1rem; font-weight: 600; }
+    #emptyState .empty-sub  { font-size: 0.82rem; margin-top: 6px; }
+    #results { display: none; }
+
+    /* ── Monthly P&L table ── */
+    .monthly-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px;
+    }
+    .month-cell {
+      background: var(--surface2); border-radius: 8px; padding: 10px 12px;
+      border: 1px solid transparent;
+    }
+    .month-cell.pos { border-color: rgba(0,230,118,0.25); }
+    .month-cell.neg { border-color: rgba(255,77,109,0.2); }
+    .month-cell .m-label { font-size: 0.65rem; color: var(--muted); font-weight: 600; }
+    .month-cell .m-val   { font-size: 0.95rem; font-weight: 800; margin-top: 3px; }
+    .month-cell.pos .m-val { color: var(--green); }
+    .month-cell.neg .m-val { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <div class="loading-msg">Running walk-forward backtest…</div>
+  <div class="loading-steps" id="loadingSteps">
+    ⏳ Downloading 2 years of daily data for ~87 IDX stocks via Yahoo Finance<br>
+    🔍 Walking forward with 60-day SMC windows, stepping every 3 days<br>
+    📊 Simulating entries at next-bar open, tracking TP/SL hits<br>
+    🧮 Computing win rate, R:R, drawdown, monthly breakdown<br>
+    <br>
+    <em>First run takes ~25-40 seconds. Results are cached 24 hours.</em>
+  </div>
+</div>
+
+<aside class="sidebar">
+  <div class="logo">IDX SCREENER <span>Strategy Backtest</span></div>
+  <hr class="sidebar-divider" />
+  <nav class="sidebar-nav">
+    <a href="/">📊 Live Screener</a>
+    <a href="/backtest/" class="active">📈 Backtest</a>
+  </nav>
+  <hr class="sidebar-divider" />
+  <button class="btn-run" id="btnRun" onclick="runBacktest(false)">▶ Run Backtest</button>
+  <button class="btn-force" id="btnForce" onclick="runBacktest(true)">↺ Force Re-run (clear cache)</button>
+  <hr class="sidebar-divider" />
+  <div class="sidebar-info">
+    <strong>Strategy Parameters</strong>
+    <div class="param-row"><span>Take Profit</span><span class="pval">2.5 R</span></div>
+    <div class="param-row"><span>Stop Loss</span><span class="pval">poi_low × −1.5%</span></div>
+    <div class="param-row"><span>Max Hold</span><span class="pval">20 days</span></div>
+    <div class="param-row"><span>SMC Window</span><span class="pval">60 candles</span></div>
+    <div class="param-row"><span>Universe</span><span class="pval">~87 IDX stocks</span></div>
+    <div class="param-row"><span>Data Period</span><span class="pval">2 years daily</span></div>
+    <div class="param-row"><span>Entry Signal</span><span class="pval">Bullish + Near POI</span></div>
+  </div>
+  <hr class="sidebar-divider" />
+  <div class="sidebar-info" style="font-size:0.68rem; color:var(--muted)">
+    ⚠️ Backtest uses technical signals only. Broker flow (GoAPI) is not historically
+    available. Results represent the SMC+POI leg of the strategy without institutional
+    flow confirmation.
+  </div>
+</aside>
+
+<main class="main">
+  <div class="hero">
+    <div class="hero-title">Strategy <span class="accent">Backtest</span></div>
+    <div class="hero-sub">Walk-forward simulation of the SMC + Point-of-Interest entry strategy across the entire IDX stock universe. Results show how the technical setup alone performs over 2 years of historical data.</div>
+    <div class="hero-badges">
+      <span class="badge strategy">SMC + POI Entry</span>
+      <span class="badge data">Yahoo Finance — 2yr Daily</span>
+      <span class="badge data">~87 IDX Stocks</span>
+      <span class="badge honest">No Broker Flow (historical unavailable)</span>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState">
+    <div class="empty-icon">📉</div>
+    <div class="empty-text">No backtest results yet</div>
+    <div class="empty-sub">Click "Run Backtest" in the sidebar to start the walk-forward simulation.</div>
+  </div>
+
+  <!-- Results (hidden until data loads) -->
+  <div id="results">
+
+    <!-- ── Summary Cards ── -->
+    <div class="cards-grid" id="metricsCards"></div>
+
+    <!-- ── Streak Stats ── -->
+    <div class="streak-row" id="streakRow"></div>
+
+    <!-- ── Equity Curve + Drawdown ── -->
+    <div class="chart-card">
+      <div class="chart-header">📈 Equity Curve (Cumulative R) <span id="finalRLabel" style="margin-left:auto; font-size:0.82rem;"></span></div>
+      <div id="equityChart" style="height:280px"></div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-header">📉 Drawdown from Peak (R)</div>
+        <div id="ddChart" style="height:220px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">🥧 Win vs Loss Distribution</div>
+        <div id="pieChart" style="height:220px"></div>
+      </div>
+    </div>
+
+    <!-- ── Per-Ticker Performance ── -->
+    <div class="chart-card">
+      <div class="chart-header">🏆 P&amp;L by Ticker (Total R)</div>
+      <div id="tickerChart" style="height:260px"></div>
+    </div>
+
+    <!-- ── Monthly P&L ── -->
+    <div class="section-header">
+      <h2>Monthly P&amp;L</h2><span class="pill" id="monthlyPill">—</span>
+    </div>
+    <div class="monthly-grid" id="monthlyGrid"></div>
+
+    <!-- ── Trade Log ── -->
+    <div class="section-header" style="margin-top:28px">
+      <h2>Full Trade Log</h2><span class="pill" id="tradeCountPill">—</span>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <button class="filter-btn active" onclick="filterTrades('ALL')" id="fAll">All</button>
+        <button class="filter-btn" onclick="filterTrades('WIN')" id="fWin">Wins</button>
+        <button class="filter-btn" onclick="filterTrades('LOSS')" id="fLoss">Losses</button>
+        <span style="margin-left:auto; font-size:0.72rem; color:var(--muted)" id="filterCount"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table id="tradeTable">
+          <thead>
+            <tr>
+              <th onclick="sortBy('ticker')">#  Ticker <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('entry_date')">Entry Date <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('exit_date')">Exit Date <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('entry_price')">Entry Price <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('exit_price')">Exit Price <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('pnl_r')">P&amp;L (R) <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('pnl_pct')">P&amp;L % <span class="sort-arrow">↕</span></th>
+              <th onclick="sortBy('hold_days')">Hold Days <span class="sort-arrow">↕</span></th>
+              <th>Outcome</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody id="tradeTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+</main>
+
+<script>
+  let allTrades   = [];
+  let filteredTrades = [];
+  let sortKey     = "entry_date";
+  let sortAsc     = true;
+  let activeFilter = "ALL";
+
+  const PLOTLY_LAYOUT = {
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor:  "rgba(0,0,0,0)",
+    font: { family: "Inter", color: "#a68498", size: 11 },
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    xaxis: { gridcolor: "rgba(99,120,255,0.07)", zeroline: false },
+    yaxis: { gridcolor: "rgba(99,120,255,0.07)", zeroline: true, zerolinecolor: "rgba(255,255,255,0.1)" },
+  };
+  const PLOTLY_CFG = { displayModeBar: false, responsive: true };
+
+  function fmt(v, dec = 1) {
+    if (v == null) return "—";
+    return Number(v).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+
+  async function runBacktest(force = false) {
+    document.getElementById("loadingOverlay").classList.add("show");
+    document.getElementById("btnRun").disabled   = true;
+    document.getElementById("btnForce").disabled = true;
+
+    try {
+      const url = force ? "/api/backtest/?force=1" : "/api/backtest/";
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.error) {
+        alert("Backtest error: " + data.error);
+        return;
+      }
+
+      renderResults(data);
+    } catch (e) {
+      alert("Failed to reach API: " + e.message + "\nMake sure Django is running.");
+    } finally {
+      document.getElementById("loadingOverlay").classList.remove("show");
+      document.getElementById("btnRun").disabled   = false;
+      document.getElementById("btnForce").disabled = false;
+    }
+  }
+
+  function renderResults(data) {
+    document.getElementById("emptyState").style.display = "none";
+    document.getElementById("results").style.display    = "block";
+
+    allTrades = data.trades || [];
+    filteredTrades = [...allTrades];
+
+    renderMetricCards(data.metrics, data.params);
+    renderStreakStats(data.metrics);
+    renderEquityCurve(data.equity_curve, data.dd_curve, data.trades);
+    renderPieChart(data.metrics);
+    renderTickerChart(data.ticker_stats);
+    renderMonthly(data.monthly_pnl);
+    renderTradeTable(allTrades);
+
+    document.getElementById("tradeCountPill").textContent = allTrades.length + " TRADES";
+  }
+
+  function renderMetricCards(m, params) {
+    const totalRClass   = m.total_r   >= 0 ? "pos" : "neg";
+    const pfClass       = m.profit_factor >= 1.5 ? "pos" : m.profit_factor >= 1 ? "gld" : "neg";
+    const winRateClass  = m.win_rate  >= 55 ? "pos" : m.win_rate >= 45 ? "gld" : "neg";
+    const ddClass       = m.max_drawdown_r <= 3 ? "pos" : m.max_drawdown_r <= 7 ? "gld" : "neg";
+    const expClass      = m.expectancy_r > 0 ? "pos" : "neg";
+
+    document.getElementById("metricsCards").innerHTML = `
+      <div class="card ${winRateClass}">
+        <div class="clabel">Win Rate</div>
+        <div class="cval">${fmt(m.win_rate)}%</div>
+        <div class="csub">${m.wins}W · ${m.losses}L · ${m.total_trades} trades</div>
+      </div>
+      <div class="card ${totalRClass}">
+        <div class="clabel">Total P&L (R)</div>
+        <div class="cval">${fmt(m.total_r, 2)}R</div>
+        <div class="csub">Avg ${fmt(m.avg_pnl_pct, 2)}% per trade</div>
+      </div>
+      <div class="card ${pfClass}">
+        <div class="clabel">Profit Factor</div>
+        <div class="cval">${fmt(m.profit_factor, 2)}</div>
+        <div class="csub">Gross W ÷ Gross L</div>
+      </div>
+      <div class="card ${expClass}">
+        <div class="clabel">Expectancy</div>
+        <div class="cval">${fmt(m.expectancy_r, 3)}R</div>
+        <div class="csub">Avg R per trade</div>
+      </div>
+      <div class="card ${ddClass}">
+        <div class="clabel">Max Drawdown</div>
+        <div class="cval">${fmt(m.max_drawdown_r, 2)}R</div>
+        <div class="csub">Worst peak-to-trough</div>
+      </div>
+      <div class="card neu">
+        <div class="clabel">Avg Win / Avg Loss</div>
+        <div class="cval">${fmt(m.avg_win_r, 2)} / ${fmt(Math.abs(m.avg_loss_r), 2)}</div>
+        <div class="csub">R multiples</div>
+      </div>
+      <div class="card neu">
+        <div class="clabel">Avg Hold</div>
+        <div class="cval">${fmt(m.avg_hold_days, 1)}d</div>
+        <div class="csub">Trading days per trade</div>
+      </div>
+      <div class="card neu">
+        <div class="clabel">Universe</div>
+        <div class="cval">${m.tickers_with_trades}</div>
+        <div class="csub">of ${m.tickers_tested} tickers had trades</div>
+      </div>
+    `;
+
+    document.getElementById("finalRLabel").innerHTML =
+      `<span style="color:${m.total_r >= 0 ? 'var(--green)' : 'var(--red)'}; font-size:0.9rem; font-weight:700;">
+        ${m.total_r >= 0 ? '+' : ''}${fmt(m.total_r, 2)}R final
+      </span>`;
+  }
+
+  function renderStreakStats(m) {
+    document.getElementById("streakRow").innerHTML = `
+      <div class="streak-card">
+        <div class="sc-label">Best Streak</div>
+        <div class="sc-val" style="color:var(--green)">${m.max_consec_wins} Wins</div>
+      </div>
+      <div class="streak-card">
+        <div class="sc-label">Worst Streak</div>
+        <div class="sc-val" style="color:var(--red)">${m.max_consec_losses} Losses</div>
+      </div>
+      ${m.best_trade ? `
+      <div class="streak-card">
+        <div class="sc-label">Best Trade</div>
+        <div class="sc-val" style="color:var(--green)">${m.best_trade.ticker} +${fmt(m.best_trade.pnl_r, 2)}R</div>
+      </div>` : ""}
+      ${m.worst_trade ? `
+      <div class="streak-card">
+        <div class="sc-label">Worst Trade</div>
+        <div class="sc-val" style="color:var(--red)">${m.worst_trade.ticker} ${fmt(m.worst_trade.pnl_r, 2)}R</div>
+      </div>` : ""}
+    `;
+  }
+
+  function renderEquityCurve(equity, dd, trades) {
+    const tradeNums = equity.map((_, i) => i + 1);
+
+    const eqTrace = {
+      x: tradeNums, y: equity,
+      type: "scatter", mode: "lines",
+      line: { color: "#ff63db", width: 2 },
+      fill: "tozeroy",
+      fillcolor: "rgba(255,99,219,0.07)",
+      hovertemplate: "Trade %{x}<br>Equity: %{y:.2f}R<extra></extra>",
+      name: "Equity (R)",
+    };
+
+    const zeroLine = {
+      x: [1, tradeNums.length], y: [0, 0],
+      type: "scatter", mode: "lines",
+      line: { color: "rgba(255,255,255,0.15)", width: 1, dash: "dot" },
+      hoverinfo: "skip", showlegend: false,
+    };
+
+    const layout = {
+      ...PLOTLY_LAYOUT,
+      height: 280,
+      showlegend: false,
+      yaxis: { ...PLOTLY_LAYOUT.yaxis, title: { text: "Cumulative R", font: { size: 10, color: "#a68498" } } },
+      xaxis: { ...PLOTLY_LAYOUT.xaxis, title: { text: "Trade #", font: { size: 10, color: "#a68498" } } },
+    };
+
+    Plotly.newPlot("equityChart", [zeroLine, eqTrace], layout, PLOTLY_CFG);
+
+    // Drawdown chart
+    const ddTrace = {
+      x: tradeNums, y: dd.map(v => -v),
+      type: "scatter", mode: "lines",
+      line: { color: "#ff4d6d", width: 1.5 },
+      fill: "tozeroy", fillcolor: "rgba(255,77,109,0.1)",
+      hovertemplate: "Trade %{x}<br>DD: %{customdata:.2f}R<extra></extra>",
+      customdata: dd, name: "Drawdown",
+    };
+    const ddLayout = {
+      ...PLOTLY_LAYOUT,
+      height: 220,
+      showlegend: false,
+      yaxis: { ...PLOTLY_LAYOUT.yaxis, autorange: "reversed" },
+    };
+    Plotly.newPlot("ddChart", [ddTrace], ddLayout, PLOTLY_CFG);
+  }
+
+  function renderPieChart(m) {
+    const trace = {
+      values: [m.wins, m.losses],
+      labels: ["WIN", "LOSS"],
+      type: "pie",
+      hole: 0.45,
+      marker: { colors: ["#00e676", "#ff4d6d"] },
+      textfont: { family: "Inter", size: 12, color: "#fceef5" },
+      hovertemplate: "%{label}: %{value} trades (%{percent})<extra></extra>",
+    };
+    const layout = {
+      ...PLOTLY_LAYOUT,
+      height: 220,
+      showlegend: true,
+      legend: { x: 0.75, y: 0.5, font: { color: "#fceef5" } },
+      annotations: [{
+        text: `${fmt(m.win_rate)}%`,
+        x: 0.5, y: 0.5, font: { size: 18, color: "#fceef5", family: "Inter" },
+        showarrow: false,
+      }],
+    };
+    Plotly.newPlot("pieChart", [trace], layout, PLOTLY_CFG);
+  }
+
+  function renderTickerChart(tickerStats) {
+    const entries = Object.entries(tickerStats)
+      .sort((a, b) => b[1].total_r - a[1].total_r);
+
+    const labels = entries.map(e => e[0]);
+    const values = entries.map(e => e[1].total_r);
+    const colors = values.map(v => v >= 0 ? "#00e676" : "#ff4d6d");
+
+    const trace = {
+      x: labels, y: values, type: "bar",
+      marker: { color: colors, opacity: 0.85 },
+      hovertemplate: "%{x}: %{y:.2f}R<extra></extra>",
+    };
+    const layout = {
+      ...PLOTLY_LAYOUT,
+      height: 260,
+      yaxis: { ...PLOTLY_LAYOUT.yaxis, title: { text: "Total R", font: { size: 10, color: "#a68498" } } },
+      bargap: 0.3,
+    };
+    Plotly.newPlot("tickerChart", [trace], layout, PLOTLY_CFG);
+  }
+
+  function renderMonthly(monthly) {
+    const months = Object.keys(monthly).sort();
+    const positive = months.filter(m => monthly[m] >= 0).length;
+    document.getElementById("monthlyPill").textContent = `${positive}/${months.length} positive months`;
+
+    document.getElementById("monthlyGrid").innerHTML = months.map(m => {
+      const v   = monthly[m];
+      const cls = v >= 0 ? "pos" : "neg";
+      return `
+        <div class="month-cell ${cls}">
+          <div class="m-label">${m}</div>
+          <div class="m-val">${v >= 0 ? "+" : ""}${fmt(v, 2)}R</div>
+        </div>`;
+    }).join("");
+  }
+
+  /* ── Trade table ── */
+  function filterTrades(f) {
+    activeFilter = f;
+    ["fAll","fWin","fLoss"].forEach(id => document.getElementById(id).classList.remove("active"));
+    document.getElementById(f === "ALL" ? "fAll" : f === "WIN" ? "fWin" : "fLoss").classList.add("active");
+    filteredTrades = f === "ALL" ? [...allTrades] : allTrades.filter(t => t.outcome === f);
+    renderTradeTable(filteredTrades);
+  }
+
+  function sortBy(key) {
+    if (sortKey === key) { sortAsc = !sortAsc; }
+    else { sortKey = key; sortAsc = true; }
+    filteredTrades.sort((a, b) => {
+      const va = a[key], vb = b[key];
+      if (va < vb) return sortAsc ? -1 :  1;
+      if (va > vb) return sortAsc ?  1 : -1;
+      return 0;
+    });
+    renderTradeTable(filteredTrades);
+  }
+
+  function renderTradeTable(trades) {
+    document.getElementById("filterCount").textContent = `Showing ${trades.length} trades`;
+    const tbody = document.getElementById("tradeTbody");
+    if (trades.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--muted)">No trades in this filter.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = trades.map((t, i) => {
+      const pnlColor  = t.pnl_r >= 0 ? "var(--green)" : "var(--red)";
+      const pnlSign   = t.pnl_r >= 0 ? "+" : "";
+      const pctSign   = t.pnl_pct >= 0 ? "+" : "";
+      const badge     = t.outcome === "WIN"
+        ? `<span class="win-badge">WIN</span>`
+        : `<span class="loss-badge">LOSS</span>`;
+      const flagsHtml = (t.flags || []).map(f => {
+        const cls = f === "Near POI" ? "flag-Near" : f === "Uptrend" ? "flag-Uptrend" : "flag-High";
+        return `<span class="flag-chip ${cls}">${f}</span>`;
+      }).join("");
+
+      return `
+        <tr>
+          <td><strong style="color:var(--accent2)">${t.ticker}</strong></td>
+          <td>${t.entry_date}</td>
+          <td>${t.exit_date}</td>
+          <td>Rp ${t.entry_price.toLocaleString()}</td>
+          <td>Rp ${t.exit_price.toLocaleString()}</td>
+          <td style="color:${pnlColor}; font-weight:700">${pnlSign}${fmt(t.pnl_r, 3)}R</td>
+          <td style="color:${pnlColor}">${pctSign}${fmt(t.pnl_pct, 2)}%</td>
+          <td>${t.hold_days}d</td>
+          <td>${badge}</td>
+          <td>${flagsHtml}</td>
+        </tr>`;
+    }).join("");
+  }
+</script>
+</body>
+</html>
