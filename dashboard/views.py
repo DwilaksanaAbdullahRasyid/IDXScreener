@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from . import analysis as an
+from . import backtest as bt
 
 def index(request):
     """Renders the main dashboard shell HTML. All data is loaded async via JS."""
@@ -44,4 +45,23 @@ def api_smc(request, ticker):
 def api_screener(request):
     """Runs the market-wide screening algorithm."""
     data = an.screen_market()
+    return JsonResponse(data)
+
+@require_GET
+def api_status(request):
+    """Returns GoAPI daily quota usage and broker cache summary."""
+    return JsonResponse(an.get_api_status())
+
+def backtest_page(request):
+    """Renders the backtest dashboard page."""
+    return render(request, "backtest.html")
+
+@require_GET
+def api_backtest(request):
+    """
+    Runs (or returns cached) walk-forward backtest.
+    Pass ?force=1 to bypass cache and re-run from scratch.
+    """
+    force = request.GET.get("force", "0") == "1"
+    data  = bt.run_backtest(force=force)
     return JsonResponse(data)
