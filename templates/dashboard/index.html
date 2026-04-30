@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — IDX Smart Screener{% endblock %}
+
+{% block extra_head %}
+<style>
+  .api-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .api-bar strong { color: var(--text); }
+  .api-bar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .score-bar {
+    display: inline-block;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .rs-val { font-size: 11px; font-weight: 600; }
+  .atr-info { font-size: 11px; color: var(--muted); }
+  .weekly-yes { color: var(--green); font-weight: 600; }
+  .weekly-no  { color: var(--muted); }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p>Smart Money Concept + Follow-the-Giant · {{ today }}</p>
+</div>
+
+{% if error %}
+<div class="card" style="border-color:var(--red); margin-bottom:16px;">
+  <p style="color:var(--red);">⚠ {{ error }}</p>
+</div>
+{% endif %}
+
+<!-- API / Market Status bar -->
+<div class="api-bar">
+  <span>
+    <span class="dot" style="background:{% if trading_session.valid %}var(--green){% else %}var(--muted){% endif %};"></span>
+    {% if trading_session.valid %}
+      <strong style="color:var(--green);">IDX Market Open</strong>
+    {% else %}
+      <strong>Market Closed</strong>
+    {% endif %}
+    {% if trading_session.session %}· {{ trading_session.session }}{% endif %}
+  </span>
+  <span>GoAPI quota: <strong>{{ api_calls_remaining }}/28</strong> remaining today ({{ api_calls_today }} used)</span>
+  <span>Universe: <strong>{{ universe_size }}</strong> stocks · <strong>{{ fca_excluded }}</strong> FCA/suspended excluded</span>
+  <a href="/backtest/" style="margin-left:auto; color:var(--accent); font-size:12px;">View Backtest →</a>
+</div>
+
+<!-- IHSG Bull Tracker -->
+<div class="card" style="margin-bottom:24px;">
+  <h2>IHSG Bull Tracker</h2>
+  <div class="grid grid-3" style="gap:24px;">
+    <div class="stat">
+      <div class="value" style="color:
+        {% if ihsg.score >= 70 %}var(--green)
+        {% elif ihsg.score >= 50 %}var(--yellow)
+        {% else %}var(--red){% endif %};">
+        {{ ihsg.score }}%
+      </div>
+      <div class="label">Bull Score</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="font-size:18px; padding-top:6px;">{{ ihsg.status }}</div>
+      <div class="label">Market Condition</div>
+    </div>
+    <div style="font-size:13px; color:var(--muted); padding-top:8px; line-height:2;">
+      <div>Current &nbsp;<strong style="color:var(--text);">{{ ihsg.current|floatformat:2 }}</strong></div>
+      <div>MA20 &nbsp;&nbsp;&nbsp;<strong>{{ ihsg.ma20|floatformat:2 }}</strong></div>
+      <div>MA50 &nbsp;&nbsp;&nbsp;<strong>{{ ihsg.ma50|floatformat:2 }}</strong></div>
+      <div>MA200 &nbsp;&nbsp;<strong>{{ ihsg.ma200|floatformat:2 }}</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- Top Candidates -->
+<div class="card">
+  <h2>Top Screener Candidates — IDX Universe · SMC + Flow + v2 Enhancements</h2>
+  {% if candidates %}
+  <div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th title="Composite score 0–85+">Score</th>
+        <th>Price</th>
+        <th>SMC Bias</th>
+        <th title="Weekly EMA20 alignment">Weekly</th>
+        <th title="Relative strength vs IHSG (20d)">RS vs IHSG</th>
+        <th>Flow Quality</th>
+        <th title="ATR-based stop loss">ATR SL</th>
+        <th title="ATR-based take profit">ATR TP</th>
+        <th>Flags</th>
+        <th>Flow Signal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in candidates %}
+      <tr>
+        <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
+        <td>
+          <span class="score-bar" style="width:{{ c.score|default:0 }}px;"></span>
+          <strong>{{ c.score|default:"—" }}</strong>
+          {% if c.composite.grade %}
+            <span class="badge badge-blue" style="margin-left:4px; font-size:10px;">{{ c.composite.grade }}</span>
+          {% endif %}
+        </td>
+        <td>Rp {{ c.price|floatformat:0 }}</td>
+        <td>
+          {% if c.smc.bias == 'Bullish' %}
+            <span class="badge badge-green">Bullish</span>
+          {% elif c.smc.bias == 'Bearish' %}
+            <span class="badge badge-red">Bearish</span>
+          {% else %}
+            <span class="badge">Neutral</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.weekly.aligned %}
+            <span class="weekly-yes" title="Weekly EMA20 bullish aligned">✓ Aligned</span>
+          {% else %}
+            <span class="weekly-no" title="Weekly EMA20 not aligned">✗ {{ c.weekly.bias|default:"—" }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.rs %}
+            <span class="rs-val" style="color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
+              {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
+            </span>
+            <span class="atr-info"> ({{ c.rs.period_days|default:20 }}d)</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if c.flow_quality %}
+            <span style="font-size:11px; font-weight:600;
+              color:{% if c.flow_quality.quality_score >= 75 %}var(--green)
+                    {% elif c.flow_quality.quality_score >= 40 %}var(--yellow)
+                    {% else %}var(--red){% endif %};">
+              {{ c.flow_quality.quality_score }}/100
+            </span>
+            <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:22 }}</div>
+          {% else %}—{% endif %}
+        </td>
+        <td class="atr-info">
+          {% if c.atr_levels.sl %}
+            <span style="color:var(--red);">{{ c.atr_levels.sl|floatformat:0 }}</span>
+            <div style="font-size:10px;">{{ c.atr_levels.sl_pct|floatformat:1 }}% risk</div>
+          {% else %}—{% endif %}
+        </td>
+        <td class="atr-info">
+          {% if c.atr_levels.tp %}
+            <span style="color:var(--green);">{{ c.atr_levels.tp|floatformat:0 }}</span>
+            <div style="font-size:10px;">{{ c.atr_levels.rr }}R</div>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% for f in c.flags %}
+            <span class="badge badge-blue" style="margin-right:2px; margin-bottom:2px;">{{ f }}</span>
+          {% endfor %}
+        </td>
+        <td style="font-size:11px; max-width:200px; color:var(--muted);">
+          {% if c.flow %}{{ c.flow.signal|truncatechars:50 }}{% else %}
+            <span style="color:var(--yellow);">{{ c.broker_source }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="icon">📡</div>
+    <div>No candidates found. Market data may be loading — refresh in a moment.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Score legend -->
+<div style="margin-top:12px; font-size:11px; color:var(--muted); display:flex; gap:20px; flex-wrap:wrap;">
+  <span><strong style="color:var(--text);">Score</strong> = composite (max ~85+)</span>
+  <span><strong style="color:var(--text);">Weekly</strong> = price above EMA20 weekly + rising slope</span>
+  <span><strong style="color:var(--text);">RS</strong> = stock return minus IHSG return over 20 days</span>
+  <span><strong style="color:var(--text);">Flow Quality</strong> = broker contamination score</span>
+  <span><strong style="color:var(--text);">ATR SL/TP</strong> = volatility-adjusted levels (ATR×1.5 / 2.5R)</span>
+</div>
+{% endblock %}

@@ -1,6 +1,16 @@
-django>=4.2,<5.0
-yfinance>=0.2.40
-pandas>=2.0
-numpy>=1.26
-requests>=2.31
-streamlit
+# IDX Smart Screener — Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core
+Django>=4.2,<5.0
+
+# Market data
+yfinance>=0.2.36
+requests>=2.31.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.26.0
+
+# Utilities
+python-dotenv>=1.0.0

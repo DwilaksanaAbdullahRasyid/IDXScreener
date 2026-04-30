@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}{{ ticker }} — IDX Smart Screener{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ ticker }}<span style="color:var(--muted); font-size:16px; font-weight:400;"> · IDX Stock Detail</span></h1>
+  {% if trend_vol %}
+  <p>Last Price: <strong>Rp {{ trend_vol.current_price|floatformat:0 }}</strong>
+     &nbsp;·&nbsp; MA20: {{ trend_vol.ma20|floatformat:0 }}
+     &nbsp;·&nbsp;
+     {% if trend_vol.trend_valid %}
+       <span class="badge badge-green">Uptrend ✓</span>
+     {% else %}
+       <span class="badge badge-red">Below MA20</span>
+     {% endif %}
+     {% if trend_vol.vol_valid %}
+       <span class="badge badge-green" style="margin-left:4px;">High Volume ✓</span>
+     {% endif %}
+  </p>
+  {% endif %}
+</div>
+
+{% if broker_error %}
+<div class="card" style="border-color:var(--yellow);">
+  <p style="color:var(--yellow); font-size:13px;">⚠ {{ broker_error }}</p>
+</div>
+{% endif %}
+
+<!-- SMC Grid -->
+<div class="grid grid-2" style="margin-bottom:24px;">
+
+  <!-- 4H SMC -->
+  <div class="card" style="margin-bottom:0;">
+    <h2>SMC — 4H Timeframe</h2>
+    {% if smc_4h.bias %}
+    <table>
+      <tr><td style="color:var(--muted);">Bias</td>
+          <td>
+            {% if smc_4h.bias == 'Bullish' %}<span class="badge badge-green">Bullish</span>
+            {% elif smc_4h.bias == 'Bearish' %}<span class="badge badge-red">Bearish</span>
+            {% else %}<span class="badge">Neutral</span>{% endif %}
+          </td></tr>
+      <tr><td style="color:var(--muted);">BOS</td><td>Rp {{ smc_4h.bos|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">CHoCH</td><td>Rp {{ smc_4h.choch|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">POI Zone</td><td>{{ smc_4h.poi_low|floatformat:0 }} – {{ smc_4h.poi_high|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">IDM</td><td>Rp {{ smc_4h.idm|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Entry</td><td class="positive">Rp {{ smc_4h.entry|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Stop Loss</td><td class="negative">Rp {{ smc_4h.sl|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Take Profit</td><td>Rp {{ smc_4h.tp|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Risk:Reward</td>
+          <td><span class="badge {% if smc_4h.rr >= 2 %}badge-green{% else %}badge-yellow{% endif %}">1:{{ smc_4h.rr }}</span></td>
+      </tr>
+    </table>
+    {% else %}
+    <div class="empty"><div>Insufficient data for 4H SMC.</div></div>
+    {% endif %}
+  </div>
+
+  <!-- 1H SMC -->
+  <div class="card" style="margin-bottom:0;">
+    <h2>SMC — 1H Timeframe</h2>
+    {% if smc_1h.bias %}
+    <table>
+      <tr><td style="color:var(--muted);">Bias</td>
+          <td>
+            {% if smc_1h.bias == 'Bullish' %}<span class="badge badge-green">Bullish</span>
+            {% elif smc_1h.bias == 'Bearish' %}<span class="badge badge-red">Bearish</span>
+            {% else %}<span class="badge">Neutral</span>{% endif %}
+          </td></tr>
+      <tr><td style="color:var(--muted);">BOS</td><td>Rp {{ smc_1h.bos|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">CHoCH</td><td>Rp {{ smc_1h.choch|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">POI Zone</td><td>{{ smc_1h.poi_low|floatformat:0 }} – {{ smc_1h.poi_high|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">IDM</td><td>Rp {{ smc_1h.idm|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Entry</td><td class="positive">Rp {{ smc_1h.entry|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Stop Loss</td><td class="negative">Rp {{ smc_1h.sl|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Take Profit</td><td>Rp {{ smc_1h.tp|floatformat:0 }}</td></tr>
+      <tr><td style="color:var(--muted);">Risk:Reward</td>
+          <td><span class="badge {% if smc_1h.rr >= 2 %}badge-green{% else %}badge-yellow{% endif %}">1:{{ smc_1h.rr }}</span></td>
+      </tr>
+    </table>
+    {% else %}
+    <div class="empty"><div>Insufficient data for 1H SMC.</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Follow-the-Giant Analysis -->
+<div class="card">
+  <h2>Follow-the-Giant Analysis
+    <span style="font-weight:400; color:var(--muted); font-size:12px; margin-left:8px; text-transform:none; letter-spacing:0;">
+      source: {{ broker_source }}
+    </span>
+  </h2>
+
+  {% if flow %}
+  <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.04); border-radius:6px;">
+    <div style="font-size:15px; font-weight:600; margin-bottom:4px;">{{ flow.signal }}</div>
+    <div style="color:var(--muted); font-size:12px;">
+      Accumulation Score: <strong style="color:var(--text);">{{ flow.acc_score }}%</strong>
+      &nbsp;·&nbsp; {{ flow.acc_label }}
+      &nbsp;·&nbsp;
+      {% if flow.eligible %}
+        <span class="badge badge-green">Trade Eligible ✓</span>
+      {% else %}
+        <span class="badge badge-red">Not Eligible ✗</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-2">
+    <div>
+      <div style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">Top Buyers</div>
+      {% if top_buy %}
+      <table>
+        <thead><tr><th>Broker</th><th>Vol (lots)</th><th>Value (IDR)</th></tr></thead>
+        <tbody>
+          {% for b in top_buy %}
+          <tr>
+            <td>{{ b.broker }}</td>
+            <td class="positive">{{ b.vol|floatformat:0 }}</td>
+            <td style="color:var(--muted); font-size:12px;">{{ b.val|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty"><div>No buy data.</div></div>
+      {% endif %}
+    </div>
+
+    <div>
+      <div style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">Top Sellers</div>
+      {% if top_sell %}
+      <table>
+        <thead><tr><th>Broker</th><th>Vol (lots)</th><th>Value (IDR)</th></tr></thead>
+        <tbody>
+          {% for b in top_sell %}
+          <tr>
+            <td>{{ b.broker }}</td>
+            <td class="negative">{{ b.vol|floatformat:0 }}</td>
+            <td style="color:var(--muted); font-size:12px;">{{ b.val|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty"><div>No sell data.</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

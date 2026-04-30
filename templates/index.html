@@ -467,6 +467,7 @@
     </div>
     <hr class="sidebar-divider" />
     <button class="btn-analyze" id="btnScan" onclick="runScreener()">🔍 SCAN MARKET (LQ45)</button>
+    <button class="btn-analyze" id="btnExport" style="background: linear-gradient(135deg, #2e7d32, #66bb6a); margin-top: 10px;" onclick="exportToExcel()">📊 RECORD TO EXCEL</button>
     <hr class="sidebar-divider" />
     <div class="sidebar-info">
       <div style="margin-bottom:10px"><strong>Screener Engine:</strong></div>
@@ -609,6 +610,11 @@
 
       btn.innerText = '🔍 SCAN MARKET (LQ45)';
       btn.disabled = false;
+    }
+
+    function exportToExcel() {
+      // Direct window location change to trigger download
+      window.location.href = '/api/export/';
     }
 
     function getFlagHtml(str) {

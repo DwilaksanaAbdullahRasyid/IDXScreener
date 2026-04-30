@@ -86,8 +86,10 @@ def fetch_yf_data(t):
 
 @st.cache_data(ttl=3600)
 def get_broker_summary(t):
-    url = f"https://api.goapi.io/stock/idx/{t}/broker_summary"
-    headers = {"Authorization": API_KEY}
+    import datetime
+    today = datetime.date.today().strftime('%Y-%m-%d')
+    url = f"https://api.goapi.io/v1/stock/idx/{t}/broker_summary?date={today}"
+    headers = {"X-API-KEY": API_KEY}
     buy = []
     total_vol = 0
     try:
