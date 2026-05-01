@@ -587,111 +587,218 @@ def analyze_flow(broker_data: dict) -> dict:
 # ── SMC — Smart Money Concept ─────────────────────────────────────────────────
 def extract_smc(records: list, timeframe: str = "1H") -> dict:
     """
-    Detects swing highs/lows, BOS, CHoCH, POI zone, IDM from OHLCV records.
-    Returns a structured dict ready for JSON serialization.
+    Detects BOS, CHoCH, IDM, Sweeps, and POI zone — faithful port of the
+    LuxAlgo 'Market Structure with Inducements & Sweeps' PineScript indicator.
+
+    Algorithm (matches LuxAlgo exactly):
+      • Swing detection: high[len] > ta.highest(len) — forward-only, NO look-ahead
+      • CHoCH: close crosses previous swing HIGH (→ Bullish) or LOW (→ Bearish)
+      • IDM: shorter-period (len=3) swing is swept BEFORE BOS is allowed
+      • BOS: close breaks trailing high/low AFTER IDM is confirmed
+      • Sweeps: wick extends beyond structure but close reverses back inside
+
+    LuxAlgo defaults: CHoCH period = 8, IDM period = 3.
     """
     if len(records) < 20:
         return {"bias": "Neutral", "error": "Not enough data"}
 
+    # ── Data normalisation ────────────────────────────────────────────────
     if isinstance(records, pd.DataFrame):
         df = records.copy()
         if "Date" in df.columns:
             df = df.rename(columns={"Date": "date"})
         elif "Datetime" in df.columns:
             df = df.rename(columns={"Datetime": "date"})
-        elif df.index.name in ["Date", "Datetime"] or type(df.index) == pd.DatetimeIndex:
+        elif df.index.name in ("Date", "Datetime") or isinstance(df.index, pd.DatetimeIndex):
             df["date"] = df.index.astype(str)
         else:
             df["date"] = df.index.astype(str)
     else:
         df = pd.DataFrame(records)
         df = df.rename(columns={"Date": "date"})
-    highs = df["High"].astype(float).values
-    lows  = df["Low"].astype(float).values
+
+    highs  = df["High"].astype(float).values
+    lows   = df["Low"].astype(float).values
     closes = df["Close"].astype(float).values
+    dates  = df["date"].astype(str).values
+    n      = len(highs)
 
-    window = 5
-    swing_highs, swing_lows = [], []
+    # ── LuxAlgo parameters ────────────────────────────────────────────────
+    LEN       = 8   # CHoCH detection period  (input default = 8)
+    SHORT_LEN = 3   # IDM  detection period   (input default = 3)
 
-    for i in range(window, len(df) - window):
-        if highs[i] == np.max(highs[i - window: i + window + 1]):
-            swing_highs.append({"idx": i, "price": float(highs[i]), "date": str(df["date"].iloc[i])})
-        if lows[i] == np.min(lows[i - window: i + window + 1]):
-            swing_lows.append({"idx": i, "price": float(lows[i]), "date": str(df["date"].iloc[i])})
+    # ── Step 1: Forward-only swing detection (NO look-ahead) ──────────────
+    # LuxAlgo: os := high[len] > ta.highest(len) ? 0 : low[len] < ta.lowest(len) ? 1 : os[1]
+    # "high[len]" = the bar LEN bars ago; ta.highest(len) = max of the MOST RECENT len bars.
+    # So a swing high at bar (i-LEN) is confirmed only after LEN subsequent bars are lower.
+    def _swings(length):
+        os = 0; prev_os = 0
+        tops, btms = [], []
+        for i in range(length, n):
+            ref_hi = highs[i - length]
+            ref_lo = lows [i - length]
+            upper  = max(highs[i - length + 1 : i + 1])   # ta.highest(length)
+            lower  = min(lows [i - length + 1 : i + 1])   # ta.lowest(length)
 
-    if len(swing_highs) < 2 or len(swing_lows) < 2:
-        return {"bias": "Neutral", "error": "Insufficient swing points", "swing_highs": swing_highs, "swing_lows": swing_lows}
+            prev_os = os
+            if   ref_hi > upper: os = 0
+            elif ref_lo < lower: os = 1
 
-    last_sh = swing_highs[-1]["price"]
-    prev_sh = swing_highs[-2]["price"]
-    last_sl = swing_lows[-1]["price"]
-    prev_sl = swing_lows[-2]["price"]
+            if os == 0 and prev_os != 0:
+                tops.append({"idx": i - length, "price": float(ref_hi),
+                             "date": dates[i - length]})
+            if os == 1 and prev_os != 1:
+                btms.append({"idx": i - length, "price": float(ref_lo),
+                             "date": dates[i - length]})
+        return tops, btms
+
+    main_tops,  main_btms  = _swings(LEN)
+    short_tops, short_btms = _swings(SHORT_LEN)
+
+    if not main_tops or not main_btms:
+        return {"bias": "Neutral", "error": "Insufficient swing data",
+                "swing_highs": [], "swing_lows": []}
+
+    # ── Step 2: State machine ─────────────────────────────────────────────
+    # Build index → price maps for O(1) lookup
+    mt_map = {s["idx"]: s["price"] for s in main_tops}
+    mb_map = {s["idx"]: s["price"] for s in main_btms}
+    st_map = {s["idx"]: s["price"] for s in short_tops}
+    sb_map = {s["idx"]: s["price"] for s in short_btms}
+
+    os           = 0                       # structural direction (0 = os; 1 = bullish)
+    topy         = main_tops[0]["price"]
+    btmy         = main_btms[0]["price"]
+    stopy        = short_tops[0]["price"] if short_tops else topy
+    sbtmy        = short_btms[0]["price"] if short_btms else btmy
+
+    top_crossed  = False; btm_crossed  = False
+    stop_crossed = False; sbtm_crossed = False
+
+    t_max   = float(highs[0]); t_max_x = 0   # trailing highest high since last CHoCH
+    t_min   = float(lows[0]);  t_min_x = 0   # trailing lowest  low  since last CHoCH
+
+    choch_events = []   # {"bar", "level", "type": "bullish"|"bearish"}
+    bos_events   = []
+    idm_events   = []
+    sweep_events = []
+
+    for i in range(n):
+        c = float(closes[i]); h = float(highs[i]); l = float(lows[i])
+
+        # Update main swings
+        if i in mt_map: topy  = mt_map[i]; top_crossed  = False
+        if i in mb_map: btmy  = mb_map[i]; btm_crossed  = False
+        # Update short swings (IDM tracker)
+        if i in st_map: stopy = st_map[i]
+        if i in sb_map: sbtmy = sb_map[i]
+
+        prev_os = os
+
+        # ── CHoCH: close crosses previous structural swing ────────────────
+        if c > topy and not top_crossed:
+            os = 1; top_crossed = True
+            choch_events.append({"bar": i, "level": topy, "type": "bullish"})
+        if c < btmy and not btm_crossed:
+            os = 0; btm_crossed = True
+            choch_events.append({"bar": i, "level": btmy, "type": "bearish"})
+
+        # Reset trailing extremes on structural flip
+        if os != prev_os:
+            t_max = h; t_max_x = i
+            t_min = l; t_min_x = i
+            stop_crossed = False; sbtm_crossed = False
+
+        # ── Bullish structure (os == 1) ────────────────────────────────────
+        if os == 1:
+            # IDM: shorter swing low swept (liquidity grab before BOS)
+            if l < sbtmy and not sbtm_crossed and abs(sbtmy - btmy) > 1e-9:
+                idm_events.append({"bar": i, "level": sbtmy, "type": "bullish"})
+                sbtm_crossed = True
+            # BOS: close above trailing high, IDM must have been swept first
+            if c > t_max and sbtm_crossed:
+                bos_events.append({"bar": i, "level": t_max, "type": "bullish"})
+                sbtm_crossed = False
+            # Sweep: wick above trailing high but close rejected back below
+            if h > t_max and c < t_max and i - t_max_x > 1:
+                sweep_events.append({"bar": i, "level": t_max, "type": "bull_sweep"})
+
+        # ── Bearish structure (os == 0) ────────────────────────────────────
+        elif os == 0:
+            # IDM: shorter swing high swept
+            if h > stopy and not stop_crossed and abs(stopy - topy) > 1e-9:
+                idm_events.append({"bar": i, "level": stopy, "type": "bearish"})
+                stop_crossed = True
+            # BOS: close below trailing low after IDM
+            if c < t_min and stop_crossed:
+                bos_events.append({"bar": i, "level": t_min, "type": "bearish"})
+                stop_crossed = False
+            # Sweep: wick below trailing low but close recovers
+            if l < t_min and c > t_min and i - t_min_x > 1:
+                sweep_events.append({"bar": i, "level": t_min, "type": "bear_sweep"})
+
+        # Update trailing extremes
+        if h > t_max: t_max = h; t_max_x = i
+        if l < t_min: t_min = l; t_min_x = i
+
+    # ── Step 3: Bias and POI zone ─────────────────────────────────────────
+    # os == 1 after last CHoCH → Bullish; os == 0 with a prior CHoCH → Bearish
+    if   os == 1:                  bias = "Bullish"
+    elif choch_events:             bias = "Bearish"
+    else:                          bias = "Neutral"
 
     current_price = float(closes[-1])
 
-    # Trend bias
-    if last_sh > prev_sh and last_sl > prev_sl:
-        bias = "Bullish"
-    elif last_sh < prev_sh and last_sl < prev_sl:
-        bias = "Bearish"
-    else:
-        bias = "Neutral"
-
-    # BOS / CHoCH
     if bias == "Bullish":
-        bos   = prev_sh   # Price broke above this → BOS
-        choch = prev_sl   # If price breaks below this → CHoCH (reversal warning)
-        fib_range = last_sh - last_sl
-        poi_low  = last_sl + fib_range * 0.0
-        poi_high = last_sl + fib_range * 0.5   # Discount zone (below 50%)
-        idm  = swing_lows[-2]["price"] if len(swing_lows) >= 2 else last_sl
-        eqh  = prev_sh
-        eql  = prev_sl
-        entry = round((poi_low + poi_high) / 2, 2)
-        sl    = round(poi_low * 0.985, 2)
-        tp    = round(entry + (entry - sl) * 2.5, 2)
-    elif bias == "Bearish":
-        bos   = prev_sl
-        choch = prev_sh
-        fib_range = last_sh - last_sl
-        poi_high = last_sh - fib_range * 0.0
-        poi_low  = last_sh - fib_range * 0.5   # Premium zone (above 50%)
-        idm  = swing_highs[-2]["price"] if len(swing_highs) >= 2 else last_sh
-        eqh  = prev_sh
-        eql  = prev_sl
-        entry = round((poi_low + poi_high) / 2, 2)
-        sl    = round(poi_high * 1.015, 2)
-        tp    = round(entry - (sl - entry) * 2.5, 2)
-    else:
-        bos   = 0
-        choch = 0
-        poi_low  = 0
-        poi_high = 0
-        idm  = 0
-        eqh  = last_sh
-        eql  = last_sl
-        entry = 0; sl = 0; tp = 0
+        # Demand zone: around last confirmed swing LOW (where buy orders sit)
+        poi_low   = round(btmy, 2)
+        poi_high  = round(btmy * 1.02, 2)        # 2% band above swing low
+        bos_lv    = bos_events[-1]["level"]   if bos_events   else t_max
+        choch_lv  = choch_events[-1]["level"] if choch_events else topy
+        idm_lv    = idm_events[-1]["level"]   if idm_events   else btmy
+        entry     = round(poi_high, 2)
+        sl        = round(poi_low * 0.985, 2)
+        tp        = round(entry + (entry - sl) * 1.8, 2)
 
-    rr = round(abs(tp - entry) / abs(entry - sl), 2) if sl != entry else 0
+    elif bias == "Bearish":
+        # Supply zone: around last confirmed swing HIGH
+        poi_low   = round(topy * 0.98, 2)
+        poi_high  = round(topy, 2)
+        bos_lv    = bos_events[-1]["level"]   if bos_events   else t_min
+        choch_lv  = choch_events[-1]["level"] if choch_events else btmy
+        idm_lv    = idm_events[-1]["level"]   if idm_events   else topy
+        entry     = round(poi_low, 2)
+        sl        = round(poi_high * 1.015, 2)
+        tp        = round(entry - (sl - entry) * 1.8, 2)
+
+    else:
+        poi_low = poi_high = bos_lv = choch_lv = idm_lv = 0.0
+        entry = sl = tp = 0.0
+
+    rr = round(abs(tp - entry) / max(abs(entry - sl), 0.0001), 2)
 
     return {
-        "timeframe":    timeframe,
-        "bias":         bias,
-        "bos":          round(bos, 2),
-        "choch":        round(choch, 2),
-        "poi_low":      round(poi_low, 2),
-        "poi_high":     round(poi_high, 2),
-        "idm":          round(idm, 2),
-        "eqh":          round(eqh, 2),
-        "eql":          round(eql, 2),
-        "entry":        entry,
-        "sl":           sl,
-        "tp":           tp,
-        "rr":           rr,
-        "current":      round(current_price, 2),
-        "swing_highs":  swing_highs[-5:],
-        "swing_lows":   swing_lows[-5:],
-        "error":        None,
+        "timeframe":     timeframe,
+        "bias":          bias,
+        "bos":           round(float(bos_lv),   2),
+        "choch":         round(float(choch_lv), 2),
+        "poi_low":       round(float(poi_low),  2),
+        "poi_high":      round(float(poi_high), 2),
+        "idm":           round(float(idm_lv),   2),
+        "eqh":           round(float(topy),     2),
+        "eql":           round(float(btmy),     2),
+        "entry":         entry,
+        "sl":            sl,
+        "tp":            tp,
+        "rr":            rr,
+        "current":       round(current_price, 2),
+        "swing_highs":   main_tops[-5:],
+        "swing_lows":    main_btms[-5:],
+        "choch_events":  choch_events[-3:],
+        "bos_events":    bos_events[-3:],
+        "idm_events":    idm_events[-3:],
+        "sweep_events":  sweep_events[-3:],
+        "error":         None,
     }
 
 # ── Trend + Volume Validation ─────────────────────────────────────────────────
