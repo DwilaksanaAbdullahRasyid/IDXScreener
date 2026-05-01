@@ -1,16 +1,26 @@
 """
 backtest.py — Walk-forward backtest of the SMC + POI entry strategy on IDX stocks.
-VERSION 3 — All identified weaknesses resolved
+VERSION 3.1 — Calibrated filters (all 6 must pass)
 
-Entry filters (ALL must pass — produces Grade A/B signals only):
+Root-cause fix from V3: WEEKLY_WINDOW=8 was below extract_smc's 20-bar minimum,
+causing weekly filter to return "Neutral" on every signal → 0 trades.
+
+Calibration changes vs V3:
+  • WEEKLY_WINDOW 8 → 26 (6-month context; safely above the 20-bar minimum)
+  • Bearish dominance REMOVED — contradicts POI pullback pattern (pullbacks
+    naturally produce 3-4 declining bars; rejection candle already covers momentum)
+  • Volume threshold 1.5× → 1.1× — IDX pullback entries occur on moderate volume;
+    requiring a 50% spike above average over-filters valid institutional setups
+  • MA50 → MA20 as hard gate — POI demand zones are below recent highs; the
+    pullback to the zone can briefly touch MA50; MA50 kept for grade scoring only
+
+Entry filters (all 6 must pass):
   1. IHSG market-weather gate (score >= 50, Bull or Strong Bull)
   2. Daily SMC bias = Bullish (BOS or CHoCH via LuxAlgo algorithm)
   3. Price within POI demand zone (±5%)
-  4. Rejection candle on signal bar (green candle or hammer)
-  5. Weekly SMC bias = Bullish (8-week rolling window — MTF alignment)
-  6. Close above MA50 (structural uptrend — hard filter, was optional)
-  7. Volume > 1.5× 10-day average (hard filter, was optional)
-  8. NOT bearish-dominant (< 4 of last 5 closes declining)
+  4. Rejection candle on signal bar (green candle or relaxed hammer)
+  5. Weekly SMC bias = Bullish (26-week rolling window — MTF alignment)
+  6. Close above MA20 (short-term uptrend) + Volume ≥ 1.1× 10-day average
 
 Stop Loss: tighter of POI-based (poi_low × 0.985) or ATR × 1.5
 
@@ -56,8 +66,9 @@ MAX_HOLD      = 40     # max bars to hold (increased from 30 to allow TP3 to dev
 WINDOW        = 60     # rolling SMC detection window (daily bars)
 STEP          = 3      # advance step between signal checks
 POI_BAND      = 0.05   # price must be within ±5% of POI zone
-WEEKLY_WINDOW = 8      # weekly bars for multi-timeframe SMC (8 weeks ≈ 2 months)
+WEEKLY_WINDOW = 26     # weekly bars for MTF SMC (26 weeks = 6 months; must be ≥ 20)
 BT_PERIOD     = "4y"   # 4-year backtest period
+VOL_MULT      = 1.1    # volume must be ≥ this × 10-day average (slightly above avg)
 
 
 # ── Helper functions ──────────────────────────────────────────────────────────
@@ -66,7 +77,8 @@ def _is_rejection_candle(opens, closes, highs, lows, idx: int) -> bool:
     """
     True if the bar at idx shows buyers defending the POI zone.
     Condition A: green candle (close > open).
-    Condition B: hammer — lower wick >= 1.5× body AND lower wick > upper wick.
+    Condition B: relaxed hammer — lower wick >= 1× body AND lower wick > upper wick.
+      (Was 1.5× — relaxed to 1× to capture more valid IDX pullback reversals)
     """
     if idx < 0 or idx >= len(closes):
         return False
@@ -77,36 +89,36 @@ def _is_rejection_candle(opens, closes, highs, lows, idx: int) -> bool:
     body        = abs(c - o)
     lower_wick  = min(o, c) - l
     upper_wick  = h - max(o, c)
-    if body > 0 and lower_wick >= 1.5 * body and lower_wick > upper_wick:
+    if body > 0 and lower_wick >= body and lower_wick > upper_wick:
         return True
     return False
 
 
-def _is_bearish_dominant(closes, idx: int, lookback: int = 5) -> bool:
-    """
-    True if 4+ of the last `lookback` bars closed lower than the previous bar.
-    Catches sustained bearish momentum — avoids entering falling knives.
-    """
-    if idx < lookback:
-        return False
-    count = 0
-    for i in range(max(1, idx - lookback + 1), idx + 1):
-        if closes[i] < closes[i - 1]:
-            count += 1
-    return count >= 4
+# NOTE: _is_bearish_dominant() REMOVED — contradicts POI pullback pattern.
+# Price retracing into a demand zone after BOS naturally produces 3-4 bearish
+# bars. Requiring fewer than 4/5 declining bars would block valid setups.
+# The rejection candle filter already ensures the signal bar itself is bullish.
 
 
 def _build_weekly_bias_map(df_weekly: pd.DataFrame) -> dict:
     """
     Rolls a WEEKLY_WINDOW-bar window over a weekly OHLCV DataFrame and records
     the SMC bias at each week end.  Returns {week_date_str: "Bullish"|"Bearish"|"Neutral"}.
+
+    IMPORTANT: extract_smc() requires len(records) >= 20.
+    WEEKLY_WINDOW = 26 satisfies this; never set below 22 or all entries are "Neutral".
     """
+    MIN_SMC_BARS = 20   # extract_smc hard minimum
     bias_map = {}
     n = len(df_weekly)
-    if n < WEEKLY_WINDOW:
+    if n < max(WEEKLY_WINDOW, MIN_SMC_BARS):
         return bias_map
     for end in range(WEEKLY_WINDOW, n + 1):
-        slice_wk = df_weekly.iloc[max(0, end - WEEKLY_WINDOW): end].copy()
+        start    = max(0, end - WEEKLY_WINDOW)
+        slice_wk = df_weekly.iloc[start: end].copy()
+        if len(slice_wk) < MIN_SMC_BARS:
+            # Slice too small — skip; _get_weekly_bias will find nearest valid entry
+            continue
         try:
             smc_wk = extract_smc(slice_wk, "1W")
             bias   = smc_wk.get("bias", "Neutral")
@@ -247,7 +259,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
       monthly_pnl  — monthly cumulative R
       params       — strategy parameters used
 
-    All 8 entry filters must pass; only the strongest setups generate signals.
+    All 6 entry filters must pass; only the strongest setups generate signals.
     Multi-TP partial exits: 1/3 position at TP1 (1R), TP2 (2R), TP3 (3R).
     Backtest period: 4 years of daily data.
     """
@@ -310,7 +322,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
     skipped    = []
     filter_counts = {
         "ihsg": 0, "smc_bias": 0, "poi": 0, "rejection": 0,
-        "weekly": 0, "ma50": 0, "volume": 0, "bearish_dom": 0,
+        "weekly": 0, "ma20": 0, "volume": 0,
     }
 
     # ── Per-ticker walk-forward ────────────────────────────────────────────────
@@ -383,31 +395,30 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                     filter_counts["weekly"] += 1
                     continue
 
-                # ── Filter 6: MA50 structural uptrend (hard filter) ───────────
+                # ── Filter 6: MA20 short-term uptrend (hard filter) ──────────
+                # MA50 retained for grade scoring only; POI pullbacks can
+                # briefly touch MA50, so MA20 is the operative gate.
                 close_win = closes[end - WINDOW: end]
                 ma20 = float(pd.Series(close_win).rolling(20).mean().iloc[-1])
                 ma50 = float(pd.Series(close_win).rolling(50).mean().iloc[-1]) \
                        if len(close_win) >= 50 else 0.0
                 trend_ma20 = bool(curr_close > ma20)
                 trend_ma50 = bool(curr_close > ma50) if ma50 > 0 else False
-                if not trend_ma50:
-                    filter_counts["ma50"] += 1
+                if not trend_ma20:
+                    filter_counts["ma20"] += 1
                     continue
 
-                # ── Filter 7: Volume spike (hard filter) ──────────────────────
+                # ── Filter 7: Volume confirmation (hard filter) ───────────────
+                # 1.1× average — IDX pullback entries occur on moderate volume;
+                # requiring 1.5× over-filtered valid institutional demand zones.
                 vol_win   = vols[end - WINDOW: end]
                 avg10v    = float(pd.Series(vol_win).rolling(10).mean().iloc[-1])
-                vol_valid = avg10v > 0 and bool(vols[end - 1] > 1.5 * avg10v)
+                vol_valid = avg10v > 0 and bool(vols[end - 1] > VOL_MULT * avg10v)
                 if not vol_valid:
                     filter_counts["volume"] += 1
                     continue
 
-                # ── Filter 8: Bearish candle dominance ────────────────────────
-                if _is_bearish_dominant(closes, end - 1):
-                    filter_counts["bearish_dom"] += 1
-                    continue
-
-                # ── All 8 filters passed — compute entry ──────────────────────
+                # ── All 6 filters passed — compute entry ──────────────────────
                 entry_idx   = end
                 entry_price = float(opens[entry_idx])
                 if entry_price <= 0:
@@ -686,11 +697,11 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             "step":           STEP,
             "poi_band":       POI_BAND,
             "weekly_window":  WEEKLY_WINDOW,
-            "entry_filters":  "8 hard filters: IHSG + SMC + POI + Rejection + Weekly + MA50 + Vol + No Bearish Dom",
+            "entry_filters":  "6 hard filters: IHSG + SMC Bullish + POI ±5% + Rejection Candle + Weekly MTF + MA20 + Vol ≥1.1×",
             "universe":       len(tickers),
             "ihsg_filter":    f"IHSG score >= {IHSG_MIN_SCORE} (Bull/Strong Bull only)",
             "period":         BT_PERIOD,
-            "version":        "v3 — all weaknesses resolved, Grade A/B signals only",
+            "version":        "v3.1 — calibrated filters, Grade A/B signals only",
         },
     }
 
