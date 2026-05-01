@@ -179,20 +179,6 @@
     </div>
   </div>
 
-  <!-- ── Signal Grade Filter + Per-Grade Stats ────────────────────────────── -->
-  <div class="card" style="margin-bottom:24px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-      <h2 style="margin:0;">Grade A Signal Quality</h2>
-      <div class="grade-filter" id="gradeFilter">
-        <span class="grade-pill all active"  onclick="setGrade('ALL')">All Trades</span>
-        <span class="grade-pill g-a" onclick="setGrade('A')">Grade A Only</span>
-      </div>
-    </div>
-    <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
-      Grade A = SMC Bullish bias + POI + Rejection candle + Weekly MTF aligned + MA20 uptrend + Volume confirmed
-    </div>
-    <div class="grade-grid" id="gradeGrid"></div>
-  </div>
 
   <!-- ── Key Metrics ──────────────────────────────────────────────────────── -->
   <div class="metrics-grid" id="metricsGrid"></div>
@@ -207,6 +193,13 @@
   <div class="card" style="margin-bottom:24px;">
     <h2>Monthly P&amp;L (IDR)</h2>
     <div class="month-grid" id="monthGrid"></div>
+    <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">
+      <div style="font-size:12px; color:var(--text); line-height:1.6;">
+        <strong>Strategy:</strong> STIX enters daily BOS/CHoCH confirmed by POI retracement + rejection candle,
+        gated on Weekly MTF alignment &amp; IHSG > 50. Exits use 3-tier partial take-profit (1R/2R/3R with trailing SL)
+        on Grade A setups only. Max hold 40 bars; position sizing is dynamic per account risk.
+      </div>
+    </div>
   </div>
 
   <!-- ── Per-ticker stats ─────────────────────────────────────────────────── -->
@@ -278,7 +271,7 @@
 <script>
 let BT_DATA = null;
 let BT_DATA_RAW = null;  // Original backtest data before position sizing
-let ACTIVE_GRADE = 'ALL'; // Current grade filter
+let ACTIVE_GRADE = 'A'; // Grade A only
 
 // Grade colour map
 const GRADE_COLORS = {
@@ -304,40 +297,6 @@ function setGrade(g) {
   if (target) target.classList.add('active');
   // Re-render with current capital/risk
   recalculateBacktest();
-}
-
-// Render the per-grade stats cards (Grade A only)
-function renderGradeStats(rawGradeStats, positionSizedTrades, risk_idr) {
-  const classMap = { A: 'g-a' };
-
-  // Recompute grade stats using IDR values from position-sized trades
-  const gradeIDR = {};
-  for (const t of positionSizedTrades) {
-    const g = t.grade || 'D';
-    if (!gradeIDR[g]) gradeIDR[g] = { trades:0, wins:0, total_idr:0 };
-    gradeIDR[g].trades++;
-    if (t.outcome === 'WIN') gradeIDR[g].wins++;
-    gradeIDR[g].total_idr += (t.pnl_idr || 0);
-  }
-
-  // Only display Grade A
-  const g = 'A';
-  const raw  = rawGradeStats[g]  || { trades:0, wins:0, losses:0, win_rate:0, avg_r:0 };
-  const idr  = gradeIDR[g]       || { trades:0, wins:0, total_idr:0 };
-  const c    = GRADE_COLORS[g];
-  const wr_color = raw.win_rate >= 55 ? '#00e676' : raw.win_rate >= 45 ? '#ffd700' : '#ff4d6d';
-  const pnl_color = idr.total_idr >= 0 ? '#00e676' : '#ff4d6d';
-  const totalM = (idr.total_idr / 1_000_000).toFixed(1);
-
-  document.getElementById('gradeGrid').innerHTML = `
-    <div class="grade-card ${classMap[g]}"
-         style="grid-column:span 4; cursor:default;">
-      <div class="g-label" style="color:${c.text};">Grade ${g}</div>
-      <div class="g-wr" style="color:${wr_color};">${raw.win_rate}%</div>
-      <div class="g-meta">Win Rate</div>
-      <div class="g-pnl" style="color:${pnl_color};">${idr.total_idr >= 0 ? '+' : ''}${totalM}M IDR</div>
-      <div class="g-meta">${raw.trades} trades · avg ${raw.avg_r > 0 ? '+' : ''}${raw.avg_r}R</div>
-    </div>`;
 }
 
 // Format IDR currency
@@ -410,13 +369,8 @@ function recalculateBacktest() {
     };
   });
 
-  // Render grade stats (always uses full set)
-  renderGradeStats(BT_DATA_RAW.grade_stats || {}, allPositionSizedTrades, risk_idr);
-
-  // Apply grade filter for metrics / charts / tables
-  const positionSizedTrades = ACTIVE_GRADE === 'ALL'
-    ? allPositionSizedTrades
-    : allPositionSizedTrades.filter(t => t.grade === ACTIVE_GRADE);
+  // Apply Grade A filter for metrics / charts / tables
+  const positionSizedTrades = allPositionSizedTrades.filter(t => t.grade === 'A');
 
   // Rebuild metrics with position-sized values
   const positionSizedData = recalculateMetrics(BT_DATA_RAW, positionSizedTrades, capital_idr);
@@ -613,13 +567,16 @@ function renderMetrics(m) {
     { value: m.tickers_with_trades,             label: 'Tickers Traded',         color: 'var(--accent)', sub: `of ${m.tickers_tested} tested` },
   ];
 
-  document.getElementById('metricsGrid').innerHTML = cards.map(c => `
-    <div class="metric-card">
+  document.getElementById('metricsGrid').innerHTML = cards.map((c, i) => {
+    const isLast = i === cards.length - 1;
+    const gridColSpan = isLast ? 'grid-column: 2;' : '';
+    return `
+    <div class="metric-card" style="${gridColSpan}">
       <div class="m-value" style="color:${c.color};">${c.value}</div>
       <div class="m-label">${c.label}</div>
       <div class="m-sub">${c.sub}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 let equityChartInst = null;
