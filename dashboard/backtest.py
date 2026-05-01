@@ -1,25 +1,21 @@
 """
 backtest.py — Walk-forward backtest of the SMC + POI entry strategy on IDX stocks.
-VERSION 3.1 — Calibrated filters (all 6 must pass)
+VERSION 3.2 — 30-day daily HTF · 10-year period · Grade A signals only
 
-Root-cause fix from V3: WEEKLY_WINDOW=8 was below extract_smc's 20-bar minimum,
-causing weekly filter to return "Neutral" on every signal → 0 trades.
-
-Calibration changes vs V3:
-  • WEEKLY_WINDOW 8 → 26 (6-month context; safely above the 20-bar minimum)
-  • Bearish dominance REMOVED — contradicts POI pullback pattern (pullbacks
-    naturally produce 3-4 declining bars; rejection candle already covers momentum)
-  • Volume threshold 1.5× → 1.1× — IDX pullback entries occur on moderate volume;
-    requiring a 50% spike above average over-filters valid institutional setups
-  • MA50 → MA20 as hard gate — POI demand zones are below recent highs; the
-    pullback to the zone can briefly touch MA50; MA50 kept for grade scoring only
+V3.2 changes vs V3.1:
+  • WEEKLY_WINDOW removed — replaced by DAILY_HTF_WINDOW = 30
+    (30-day rolling daily window for bull/bear confirmation; no extra download)
+  • Weekly data download removed — HTF bias computed from same daily data
+  • BT_PERIOD 4y → 10y (daily data available; minimum 100 trades target)
+  • _is_rejection_candle() moved to analysis.py (shared with live screener)
+  • Filter 5 label: "weekly" → "htf_daily"
 
 Entry filters (all 6 must pass):
   1. IHSG market-weather gate (score >= 50, Bull or Strong Bull)
   2. Daily SMC bias = Bullish (BOS or CHoCH via LuxAlgo algorithm)
   3. Price within POI demand zone (±5%)
   4. Rejection candle on signal bar (green candle or relaxed hammer)
-  5. Weekly SMC bias = Bullish (26-week rolling window — MTF alignment)
+  5. 30-day daily HTF bias = Bullish (rolling 30-bar daily SMC window)
   6. Close above MA20 (short-term uptrend) + Volume ≥ 1.1× 10-day average
 
 Stop Loss: tighter of POI-based (poi_low × 0.985) or ATR × 1.5
@@ -35,7 +31,7 @@ P&L outcomes:
   TP1+TP2 → stopped at TP1:  +1.33R
   All 3 TPs hit:             +2.0R
 
-Backtest period: 4 years daily data
+Backtest period: 10 years daily data
 """
 
 import json
@@ -51,95 +47,74 @@ from .analysis import (
     IDX_UNIVERSE,
     _cache_get,
     _cache_set,
+    _is_rejection_candle,   # shared helper — moved to analysis.py in V3.2
 )
 
 BASE_DIR      = Path(__file__).resolve().parent.parent
 BT_CACHE_FILE = BASE_DIR / "backtest_cache.json"
 BT_CACHE_TTL  = 86400   # 24 hours
 
-# ── Strategy parameters (V3) ───────────────────────────────────────────────────
-TP1_R         = 1.0    # first partial exit (1R)
-TP2_R         = 2.0    # second partial exit (2R)
-TP3_R         = 3.0    # final exit (3R)
-SL_FACTOR     = 0.015  # SL = poi_low × (1 - SL_FACTOR) below demand zone
-MAX_HOLD      = 40     # max bars to hold (increased from 30 to allow TP3 to develop)
-WINDOW        = 60     # rolling SMC detection window (daily bars)
-STEP          = 3      # advance step between signal checks
-POI_BAND      = 0.05   # price must be within ±5% of POI zone
-WEEKLY_WINDOW = 26     # weekly bars for MTF SMC (26 weeks = 6 months; must be ≥ 20)
-BT_PERIOD     = "4y"   # 4-year backtest period
-VOL_MULT      = 1.1    # volume must be ≥ this × 10-day average (slightly above avg)
+# ── Strategy parameters (V3.2) ────────────────────────────────────────────────
+TP1_R            = 1.0    # first partial exit (1R)
+TP2_R            = 2.0    # second partial exit (2R)
+TP3_R            = 3.0    # final exit (3R)
+SL_FACTOR        = 0.015  # SL = poi_low × (1 - SL_FACTOR) below demand zone
+MAX_HOLD         = 40     # max bars to hold (allows TP3 to develop)
+WINDOW           = 60     # rolling SMC detection window (daily bars)
+STEP             = 3      # advance step between signal checks
+POI_BAND         = 0.05   # price must be within ±5% of POI zone
+DAILY_HTF_WINDOW = 30     # 30-day daily rolling window for HTF bull/bear confirmation
+                           # (replaces WEEKLY_WINDOW=26; no extra download needed)
+BT_PERIOD        = "10y"  # 10-year backtest period (daily "1d"; yfinance supports "10y")
+VOL_MULT         = 1.1    # volume must be ≥ this × 10-day average (slightly above avg)
 
 
 # ── Helper functions ──────────────────────────────────────────────────────────
+# NOTE: _is_rejection_candle() moved to analysis.py (V3.2) so it is shared
+# between the live screener (1H bars) and the backtest (daily bars).
+# It is imported at the top of this file.
 
-def _is_rejection_candle(opens, closes, highs, lows, idx: int) -> bool:
+
+def _build_daily_htf_map(df_daily: pd.DataFrame) -> dict:
     """
-    True if the bar at idx shows buyers defending the POI zone.
-    Condition A: green candle (close > open).
-    Condition B: relaxed hammer — lower wick >= 1× body AND lower wick > upper wick.
-      (Was 1.5× — relaxed to 1× to capture more valid IDX pullback reversals)
+    Rolls a DAILY_HTF_WINDOW-bar window over daily OHLCV and returns
+    {date_str: "Bullish"|"Bearish"|"Neutral"} for HTF confirmation.
+
+    Uses the same daily data already downloaded — zero extra downloads.
+    Replaces the weekly bias map (V3.1) which required a separate weekly download.
+
+    DAILY_HTF_WINDOW = 30 satisfies extract_smc's 20-bar minimum.
     """
-    if idx < 0 or idx >= len(closes):
-        return False
-    o = float(opens[idx]);  c = float(closes[idx])
-    h = float(highs[idx]);  l = float(lows[idx])
-    if c > o:
-        return True
-    body        = abs(c - o)
-    lower_wick  = min(o, c) - l
-    upper_wick  = h - max(o, c)
-    if body > 0 and lower_wick >= body and lower_wick > upper_wick:
-        return True
-    return False
-
-
-# NOTE: _is_bearish_dominant() REMOVED — contradicts POI pullback pattern.
-# Price retracing into a demand zone after BOS naturally produces 3-4 bearish
-# bars. Requiring fewer than 4/5 declining bars would block valid setups.
-# The rejection candle filter already ensures the signal bar itself is bullish.
-
-
-def _build_weekly_bias_map(df_weekly: pd.DataFrame) -> dict:
-    """
-    Rolls a WEEKLY_WINDOW-bar window over a weekly OHLCV DataFrame and records
-    the SMC bias at each week end.  Returns {week_date_str: "Bullish"|"Bearish"|"Neutral"}.
-
-    IMPORTANT: extract_smc() requires len(records) >= 20.
-    WEEKLY_WINDOW = 26 satisfies this; never set below 22 or all entries are "Neutral".
-    """
-    MIN_SMC_BARS = 20   # extract_smc hard minimum
+    MIN_SMC_BARS = 20
     bias_map = {}
-    n = len(df_weekly)
-    if n < max(WEEKLY_WINDOW, MIN_SMC_BARS):
+    n = len(df_daily)
+    if n < max(DAILY_HTF_WINDOW, MIN_SMC_BARS):
         return bias_map
-    for end in range(WEEKLY_WINDOW, n + 1):
-        start    = max(0, end - WEEKLY_WINDOW)
-        slice_wk = df_weekly.iloc[start: end].copy()
-        if len(slice_wk) < MIN_SMC_BARS:
-            # Slice too small — skip; _get_weekly_bias will find nearest valid entry
+    for end in range(DAILY_HTF_WINDOW, n + 1):
+        slice_d = df_daily.iloc[max(0, end - DAILY_HTF_WINDOW): end].copy()
+        if len(slice_d) < MIN_SMC_BARS:
             continue
         try:
-            smc_wk = extract_smc(slice_wk, "1W")
-            bias   = smc_wk.get("bias", "Neutral")
+            smc_d = extract_smc(slice_d, "1D")
+            bias  = smc_d.get("bias", "Neutral")
         except Exception:
             bias = "Neutral"
-        week_date = df_weekly.index[end - 1].strftime("%Y-%m-%d")
-        bias_map[week_date] = bias
+        date_str = df_daily.index[end - 1].strftime("%Y-%m-%d")
+        bias_map[date_str] = bias
     return bias_map
 
 
-def _get_weekly_bias(bias_map: dict, signal_date: str) -> str:
+def _get_daily_htf_bias(bias_map: dict, signal_date: str) -> str:
     """
-    Returns the most recent weekly SMC bias on or before signal_date.
-    Looks back up to 7 calendar days to bridge weekend/holiday gaps.
+    Returns the most recent 30-day daily HTF bias on or before signal_date.
+    Looks back up to 3 calendar days to bridge weekend/holiday gaps.
     Returns "Neutral" (conservative block) if no entry found.
     """
     if signal_date in bias_map:
         return bias_map[signal_date]
     try:
         d = dt.datetime.strptime(signal_date, "%Y-%m-%d")
-        for i in range(1, 8):
+        for i in range(1, 4):
             past = (d - dt.timedelta(days=i)).strftime("%Y-%m-%d")
             if past in bias_map:
                 return bias_map[past]
@@ -293,36 +268,15 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
     except Exception as e:
         return {"error": f"Daily data download failed: {e}"}
 
-    # ── Batch download 4 years of weekly data (for MTF) ───────────────────────
-    try:
-        raw_weekly = yf.download(
-            tickers_str, period=BT_PERIOD, interval="1wk",
-            group_by="ticker", progress=False, auto_adjust=True,
-        )
-    except Exception:
-        raw_weekly = None   # graceful degradation — MTF filter skipped
-
-    # ── Pre-build weekly bias maps per ticker ──────────────────────────────────
-    weekly_bias_maps: dict[str, dict] = {}
-    if raw_weekly is not None:
-        for t, t_jk in zip(tickers, tickers_jk):
-            try:
-                if isinstance(raw_weekly.columns, pd.MultiIndex):
-                    if t_jk not in raw_weekly.columns.get_level_values(0):
-                        continue
-                    df_wk = raw_weekly[t_jk].dropna()
-                else:
-                    df_wk = raw_weekly.dropna()
-                if len(df_wk) >= WEEKLY_WINDOW:
-                    weekly_bias_maps[t] = _build_weekly_bias_map(df_wk)
-            except Exception:
-                pass
+    # NOTE (V3.2): Weekly download removed. HTF confirmation now uses the
+    # same daily data with a 30-bar rolling window (_build_daily_htf_map).
+    # This eliminates a separate network request and simplifies the pipeline.
 
     all_trades = []
     skipped    = []
     filter_counts = {
         "ihsg": 0, "smc_bias": 0, "poi": 0, "rejection": 0,
-        "weekly": 0, "ma20": 0, "volume": 0,
+        "htf_daily": 0, "ma20": 0, "volume": 0,
     }
 
     # ── Per-ticker walk-forward ────────────────────────────────────────────────
@@ -348,7 +302,8 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             dates  = df.index.strftime("%Y-%m-%d").tolist()
             n      = len(df)
 
-            w_bias_map = weekly_bias_maps.get(t, {})
+            # Build 30-day daily HTF bias map for this ticker (no extra download)
+            htf_map = _build_daily_htf_map(df) if len(df) >= DAILY_HTF_WINDOW else {}
             in_trade_until = -1
 
             for end in range(WINDOW, n - MAX_HOLD - 1, STEP):
@@ -389,10 +344,13 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                     filter_counts["rejection"] += 1
                     continue
 
-                # ── Filter 5: Weekly MTF alignment ────────────────────────────
-                weekly_bias = _get_weekly_bias(w_bias_map, signal_date)
-                if weekly_bias != "Bullish":
-                    filter_counts["weekly"] += 1
+                # ── Filter 5: 30-day Daily HTF alignment ─────────────────────
+                # Uses a 30-bar rolling window on the same daily data — no extra
+                # download. Replaces the weekly bias (V3.1) which needed a
+                # separate weekly yfinance download.
+                htf_bias = _get_daily_htf_bias(htf_map, signal_date)
+                if htf_bias != "Bullish":
+                    filter_counts["htf_daily"] += 1
                     continue
 
                 # ── Filter 6: MA20 short-term uptrend (hard filter) ──────────
@@ -512,9 +470,9 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 pnl_pct   = (exit_price - entry_price) / entry_price * 100
                 hold_days = exit_idx - entry_idx
 
-                flags = ["Near POI", "Rejection Candle", "Weekly Bullish"]
+                flags = ["Near POI", "Rejection Candle", "HTF Bullish"]
                 if trend_ma20: flags.append("Above MA20")
-                flags.append("Above MA50")
+                if trend_ma50: flags.append("Above MA50")
                 flags.append("High Vol")
                 if smc.get("bos"):  flags.append("BOS")
                 if smc.get("idm"):  flags.append("IDM")
@@ -522,8 +480,9 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 # ── Grade (proxy composite — no broker data available) ─────────
                 smc_pts    = 30 if smc.get("bos") else 20
                 idm_pts    = 15 if smc.get("idm") else 0
-                # Weekly (15), MA50 (20), Vol (15), POI (25) all guaranteed by filters
-                proxy_raw   = 25 + smc_pts + idm_pts + 15 + 20 + 15
+                # HTF (15), MA50 score (20 if above else 0), Vol (15), POI (25) guaranteed
+                ma50_pts    = 20 if trend_ma50 else 0
+                proxy_raw   = 25 + smc_pts + idm_pts + 15 + ma50_pts + 15
                 proxy_score = min(100, round(proxy_raw / 1.2))
                 grade = ("A" if proxy_score >= 80
                          else "B" if proxy_score >= 65
@@ -552,7 +511,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                     "flags":             flags,
                     "poi_low":           round(poi_low,  2),
                     "poi_high":          round(poi_high, 2),
-                    "weekly_bias":       weekly_bias,
+                    "htf_bias":          htf_bias,
                     "rejection_candle":  True,   # guaranteed by filter
                     "grade":             grade,
                     "proxy_score":       proxy_score,
@@ -696,12 +655,17 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             "window":         WINDOW,
             "step":           STEP,
             "poi_band":       POI_BAND,
-            "weekly_window":  WEEKLY_WINDOW,
-            "entry_filters":  "6 hard filters: IHSG + SMC Bullish + POI ±5% + Rejection Candle + Weekly MTF + MA20 + Vol ≥1.1×",
+            "htf_window":     DAILY_HTF_WINDOW,
+            "htf_note":       "30-day daily rolling window (no extra download)",
+            "entry_filters":  "6 hard filters: IHSG + SMC Bullish + POI ±5% + Rejection Candle + 30d Daily HTF + MA20 + Vol ≥1.1×",
             "universe":       len(tickers),
             "ihsg_filter":    f"IHSG score >= {IHSG_MIN_SCORE} (Bull/Strong Bull only)",
             "period":         BT_PERIOD,
-            "version":        "v3.1 — calibrated filters, Grade A/B signals only",
+            "version":        "v3.2 — 1H screener SMC, 30d daily HTF, 10y period",
+            "trade_count_note": f"{total} trades over {BT_PERIOD}" + (
+                " ⚠ below 100-trade minimum — consider loosening POI_BAND or VOL_MULT"
+                if total < 100 else ""
+            ),
         },
     }
 

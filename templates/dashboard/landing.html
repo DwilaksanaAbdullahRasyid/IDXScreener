@@ -437,9 +437,9 @@ footer {
         <div class="fc-icon">📈</div>
         <div class="fc-title">Walk-Forward Backtest</div>
         <div class="fc-body">
-          2-year rolling simulation on the full IDX universe with dynamic position sizing in IDR. Understand your edge before risking real capital.
+          10-year walk-forward simulation on the full IDX universe with dynamic position sizing in IDR. Understand your edge before risking real capital.
         </div>
-        <span class="fc-tag">39%+ Win Rate</span>
+        <span class="fc-tag">{% if bt_stats %}{{ bt_stats.win_rate }}%+ Win Rate{% else %}Grade A Win Rate{% endif %}</span>
       </div>
     </div>
   </div>
@@ -454,9 +454,9 @@ footer {
       <div class="metric-sub">LQ45 + IDX liquid universe</div>
     </div>
     <div class="metric-item">
-      <div class="metric-num">39%+</div>
+      <div class="metric-num">{% if bt_stats %}{{ bt_stats.win_rate }}%{% else %}—{% endif %}</div>
       <div class="metric-lbl">Backtest Win Rate</div>
-      <div class="metric-sub">Walk-forward, 2yr daily data</div>
+      <div class="metric-sub">{% if bt_stats %}Walk-forward · {{ bt_stats.period }} · {{ bt_stats.total_trades }} trades{% else %}Walk-forward · Grade A signals{% endif %}</div>
     </div>
     <div class="metric-item">
       <div class="metric-num">1.8R</div>

@@ -1,5 +1,7 @@
 import json
+import time
 import datetime
+from pathlib import Path
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
@@ -7,6 +9,35 @@ from .models import Stock, ForeignFlow, SMCSignal
 from . import analysis
 from . import backtest as bt
 from . import trade_log as tl
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _get_cached_bt_stats():
+    """
+    Reads backtest_cache.json (if it exists and is fresh) and returns a
+    minimal stats dict for the landing page hero/metrics section.
+    Returns None if no cache file or cache is stale (> 48 h).
+    """
+    cache_file = BASE_DIR / "backtest_cache.json"
+    try:
+        if not cache_file.exists():
+            return None
+        if (time.time() - cache_file.stat().st_mtime) > 172_800:   # 48 h
+            return None
+        with open(cache_file) as f:
+            data = json.load(f)
+        m = data.get("metrics", {})
+        p = data.get("params",  {})
+        return {
+            "win_rate":      round(m.get("win_rate",      0), 1),
+            "total_trades":  m.get("total_trades",  0),
+            "profit_factor": round(m.get("profit_factor", 0), 2),
+            "period":        p.get("period",  "—"),
+            "version":       p.get("version", "—"),
+        }
+    except Exception:
+        return None
 
 
 def landing_page(request):
@@ -23,6 +54,7 @@ def landing_page(request):
         "summary":        summary,
         "recent_trades":  recent_trades,
         "today":          datetime.date.today(),
+        "bt_stats":       _get_cached_bt_stats(),   # None if no backtest cache
     }
     return render(request, "dashboard/landing.html", context)
 

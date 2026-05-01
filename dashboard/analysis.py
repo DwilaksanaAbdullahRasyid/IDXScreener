@@ -824,6 +824,28 @@ def validate_trend_volume(records_1d: list) -> dict:
         "avg_vol_10d": int(avg10v),
     }
 
+# ── Rejection Candle Helper (shared by screener + backtest) ──────────────────
+def _is_rejection_candle(opens, closes, highs, lows, idx: int) -> bool:
+    """
+    True if the bar at idx shows buyers defending a POI zone.
+    Condition A: green candle (close > open).
+    Condition B: relaxed hammer — lower wick >= 1× body AND lower wick > upper wick.
+    Used by both screen_market() (on 1H bars) and backtest (on daily bars).
+    """
+    if idx < 0 or idx >= len(closes):
+        return False
+    o = float(opens[idx]);  c = float(closes[idx])
+    h = float(highs[idx]);  l = float(lows[idx])
+    if c > o:
+        return True
+    body       = abs(c - o)
+    lower_wick = min(o, c) - l
+    upper_wick = h - max(o, c)
+    if body > 0 and lower_wick >= body and lower_wick > upper_wick:
+        return True
+    return False
+
+
 # ── Market Screener ──────────────────────────────────────────────────────────
 def screen_market():
     """
@@ -876,45 +898,59 @@ def screen_market():
         if len(df_1d) < 20 or len(df_1h) < 20:
             continue
 
+        # Daily trend/MA check (structural — stays on 1D)
         tv = validate_trend_volume(df_1d)
 
-        df_4h = df_1h.resample("4h").agg({
-            "Open": "first", "High": "max", "Low": "min",
-            "Close": "last", "Volume": "sum",
-        }).dropna()
-
-        smc_4h = extract_smc(df_4h, "4H")
-
-        if smc_4h.get("bias") != "Bullish":
+        # ── 1H SMC bias (BOS/CHoCH on hourly structure) ──────────────────────
+        smc_1h = extract_smc(df_1h, "1H")
+        if smc_1h.get("bias") != "Bullish":
             continue
 
-        curr_price = tv["current_price"]
-        poi_low    = smc_4h.get("poi_low", 0)
-        poi_high   = smc_4h.get("poi_high", 0)
+        # ── 1H entry mechanism — all checks on hourly bars ───────────────────
+        curr_price_1h = float(df_1h["Close"].iloc[-1])
+        poi_low       = smc_1h.get("poi_low",  0)
+        poi_high      = smc_1h.get("poi_high", 0)
 
         near_poi = (
             poi_low > 0 and poi_high > 0
-            and curr_price <= poi_high * 1.03
-            and curr_price >= poi_low * 0.97
+            and curr_price_1h <= poi_high * 1.03
+            and curr_price_1h >= poi_low  * 0.97
         )
 
         if not (tv["trend_valid"] or near_poi):
             continue
 
-        flags = []
-        if tv["trend_valid"]: flags.append("Uptrend")
-        if tv["vol_valid"]:   flags.append("High Vol")
-        if near_poi:          flags.append("Near POI")
+        # Rejection candle on the most recent 1H bar
+        opens_1h  = df_1h["Open"].values.astype(float)
+        closes_1h = df_1h["Close"].values.astype(float)
+        highs_1h  = df_1h["High"].values.astype(float)
+        lows_1h   = df_1h["Low"].values.astype(float)
+        rejection_1h = _is_rejection_candle(opens_1h, closes_1h, highs_1h, lows_1h, len(df_1h) - 1)
+        if not rejection_1h:
+            continue
 
-        tech_score = (40 if near_poi else 0) + (30 if tv["vol_valid"] else 0) + (30 if tv["trend_valid"] else 0)
+        # Volume confirmation on 1H bars (10-period rolling average)
+        vol_1h   = df_1h["Volume"].values.astype(float)
+        avg10_1h = float(pd.Series(vol_1h).rolling(10).mean().iloc[-1])
+        vol_1h_valid = avg10_1h > 0 and bool(vol_1h[-1] > 1.1 * avg10_1h)
+        if not vol_1h_valid:
+            continue
+
+        flags = []
+        if near_poi:           flags.append("Near POI")
+        if rejection_1h:       flags.append("Rejection 1H")
+        if vol_1h_valid:       flags.append("Vol 1H")
+        if tv["trend_valid"]:  flags.append("Uptrend")
+
+        tech_score = (40 if near_poi else 0) + (30 if vol_1h_valid else 0) + (30 if tv["trend_valid"] else 0)
 
         technical_candidates.append({
             "ticker":     t,
             "score":      tech_score,
             "tech_score": tech_score,
-            "price":      curr_price,
+            "price":      curr_price_1h,
             "flags":      flags,
-            "smc":        smc_4h,
+            "smc":        smc_1h,
             "trend_vol":  tv,
             "df_1d":      df_1d,  # keep for ATR computation (not serialised)
         })

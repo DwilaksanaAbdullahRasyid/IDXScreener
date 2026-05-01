@@ -143,7 +143,7 @@
 <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
   <div>
     <h1>Strategy Backtest</h1>
-    <p>Walk-forward simulation · SMC V3 · IDX Universe (4 years daily) · Partial TP exits</p>
+    <p>Walk-forward simulation · SMC V3.2 · IDX Universe (10 years daily) · Partial TP exits</p>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="btn" id="runBtn" onclick="loadBacktest(false)">▶ Load Results</button>
@@ -516,7 +516,7 @@ async function loadBacktest(force = false) {
   btn.textContent = force ? '⏳ Re-running…' : '⏳ Loading…';
   banner.style.display = '';
   msg.textContent = force
-    ? 'Re-running V3 backtest on full IDX universe (4y data, 8 filters). This can take 5–8 minutes…'
+    ? 'Re-running V3.2 backtest on full IDX universe (10y data, 6 filters). This can take 8–12 minutes…'
     : 'Loading backtest results…';
 
   try {
