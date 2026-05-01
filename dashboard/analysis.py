@@ -123,16 +123,29 @@ def _save_broker_disk(cache: dict):
     except Exception:
         pass
 
+def _broker_cache_valid(entry: dict) -> bool:
+    """True if cache entry is from today (calendar-day freshness).
+    Falls back to rolling 24h check for legacy entries without a 'date' key."""
+    today = datetime.date.today().isoformat()
+    if entry.get("date") == today:
+        return True
+    # Legacy fallback: accept if within 24h (old entries without 'date' key)
+    return (time.time() - entry.get("ts", 0)) < BROKER_CACHE_TTL
+
 def _get_broker_from_disk(ticker: str) -> dict | None:
     cache = _load_broker_disk()
     entry = cache.get(ticker)
-    if entry and (time.time() - entry["ts"]) < BROKER_CACHE_TTL:
+    if entry and _broker_cache_valid(entry):
         return entry["data"]
     return None
 
 def _put_broker_to_disk(ticker: str, data: dict):
     cache = _load_broker_disk()
-    cache[ticker] = {"ts": time.time(), "data": data}
+    cache[ticker] = {
+        "ts":   time.time(),
+        "date": datetime.date.today().isoformat(),  # calendar-day key
+        "data": data,
+    }
     _save_broker_disk(cache)
 
 # ── Daily API Usage Counter ───────────────────────────────────────────────────
@@ -170,7 +183,7 @@ def get_api_status() -> dict:
     usage = _get_api_usage()
     disk  = _load_broker_disk()
     now   = time.time()
-    cached_tickers = [t for t, v in disk.items() if (now - v["ts"]) < BROKER_CACHE_TTL]
+    cached_tickers = [t for t, v in disk.items() if _broker_cache_valid(v)]
     return {
         "date":              usage["date"],
         "calls_today":       usage["count"],
@@ -821,7 +834,7 @@ def screen_market():
         df_1d = cand.pop("df_1d", None)  # remove DataFrame before serialisation
 
         # ── Broker flow: cache → live GoAPI → pending ─────────────────────────
-        has_cache = t in disk_cache and (now - disk_cache[t]["ts"]) < BROKER_CACHE_TTL
+        has_cache = t in disk_cache and _broker_cache_valid(disk_cache[t])
         if has_cache:
             broker_data = disk_cache[t]["data"]
             cand["broker_source"] = "cached"
@@ -930,7 +943,7 @@ def screen_market():
 
             # Broker flow — disk cache only, never call GoAPI for watchlist
             cached_entry = disk_cache.get(t)
-            if cached_entry and (now - cached_entry["ts"]) < BROKER_CACHE_TTL:
+            if cached_entry and _broker_cache_valid(cached_entry):
                 bd_w         = cached_entry["data"]
                 flow_w       = analyze_flow(bd_w)
                 flow_elig_w  = flow_w.get("eligible", False)
@@ -975,6 +988,14 @@ def screen_market():
 
     api_status = get_api_status()
     session    = is_valid_trading_window()
+
+    # ── Persist today's confirmed signals to the daily trade log ─────────────
+    if confirmed:
+        try:
+            from . import trade_log as _tl
+            _tl.save_daily_signals(confirmed, datetime.date.today().isoformat())
+        except Exception:
+            pass  # never crash the screener if trade_log has an issue
 
     res = {
         # Signal buckets (all passed technical filter, split by flow)

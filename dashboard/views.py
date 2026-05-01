@@ -6,6 +6,25 @@ from django.views.decorators.http import require_GET
 from .models import Stock, ForeignFlow, SMCSignal
 from . import analysis
 from . import backtest as bt
+from . import trade_log as tl
+
+
+def landing_page(request):
+    """STIX landing page — first impression before the dashboard."""
+    ihsg = analysis.fetch_ihsg()
+    screener_data = analysis.screen_market()
+    summary = tl.get_summary_stats(days=30)
+    recent_trades = tl.get_trade_log_history(days=7)[:5]  # last 5 signals
+
+    context = {
+        "ihsg":           ihsg,
+        "signal_count":   screener_data.get("total_candidates", 0),
+        "universe_size":  screener_data.get("universe_size", 87),
+        "summary":        summary,
+        "recent_trades":  recent_trades,
+        "today":          datetime.date.today(),
+    }
+    return render(request, "dashboard/landing.html", context)
 
 
 def index(request):
@@ -115,3 +134,27 @@ def api_backtest(request):
 def api_status(request):
     """Returns GoAPI daily quota usage and broker cache summary."""
     return JsonResponse(analysis.get_api_status())
+
+
+def trade_log_page(request):
+    """Trade Log page — daily signal tracking with live SL/TP status."""
+    date_str = request.GET.get("date", datetime.date.today().isoformat())
+    trades   = tl.update_trade_statuses(date_str)
+    history  = tl.get_trade_log_history(days=30)
+    summary  = tl.get_summary_stats(days=30)
+
+    context = {
+        "trades":    trades,
+        "history":   history,
+        "summary":   summary,
+        "date":      date_str,
+        "today":     datetime.date.today().isoformat(),
+    }
+    return render(request, "dashboard/trade_log.html", context)
+
+
+@require_GET
+def api_trade_log(request):
+    """Returns trade log entries for a given date as JSON."""
+    date_str = request.GET.get("date", datetime.date.today().isoformat())
+    return JsonResponse({"trades": tl.update_trade_statuses(date_str)})

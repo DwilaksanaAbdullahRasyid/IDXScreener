@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Trade Log — STIX{% endblock %}
+
+{% block extra_head %}
+<style>
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .s-pending  { background: rgba(255,215,0,0.12);  color: #ffd700; border: 1px solid rgba(255,215,0,0.25); }
+  .s-open     { background: rgba(99,179,255,0.12); color: #63b3ff; border: 1px solid rgba(99,179,255,0.25); }
+  .s-hit-tp   { background: rgba(0,230,118,0.12);  color: #00e676; border: 1px solid rgba(0,230,118,0.25); }
+  .s-hit-sl   { background: rgba(255,77,109,0.12); color: #ff4d6d; border: 1px solid rgba(255,77,109,0.25); }
+  .s-expired  { background: rgba(166,132,152,0.12);color: #a68498; border: 1px solid rgba(166,132,152,0.25); }
+
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px;
+  }
+  .sum-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; text-align: center;
+  }
+  .sum-card .sv { font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .sum-card .sl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+  .tl-table td { padding: 8px 12px; font-size: 12px; }
+  .tl-table th { font-size: 10px; padding: 7px 12px; }
+
+  @media (max-width: 768px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+  <div>
+    <h1>Trade Log</h1>
+    <p>Daily signal tracking — entry, SL, and TP outcomes</p>
+  </div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input type="date" id="datePicker" value="{{ date }}"
+           style="padding:8px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; font-size:13px;"
+           onchange="window.location.href='/trade-log/?date='+this.value" />
+    <a href="/trade-log/?date={{ today }}" class="btn" style="font-size:13px; padding:8px 16px;">Today</a>
+  </div>
+</div>
+
+<!-- Summary stats -->
+<div class="summary-grid">
+  <div class="sum-card">
+    <div class="sv" style="color:var(--accent);">{{ summary.total }}</div>
+    <div class="sl">Total Signals (30d)</div>
+  </div>
+  <div class="sum-card">
+    <div class="sv" style="color:var(--green);">{{ summary.wins }}</div>
+    <div class="sl">Hit TP ✅</div>
+  </div>
+  <div class="sum-card">
+    <div class="sv" style="color:var(--red);">{{ summary.losses }}</div>
+    <div class="sl">Hit SL ❌</div>
+  </div>
+  <div class="sum-card">
+    <div class="sv" style="color:{% if summary.win_rate >= 50 %}var(--green){% elif summary.win_rate >= 40 %}var(--yellow){% else %}var(--red){% endif %};">
+      {{ summary.win_rate }}%
+    </div>
+    <div class="sl">Win Rate</div>
+  </div>
+  <div class="sum-card">
+    <div class="sv" style="color:{% if summary.avg_pnl_r >= 0 %}var(--green){% else %}var(--red){% endif %};">
+      {% if summary.avg_pnl_r > 0 %}+{% endif %}{{ summary.avg_pnl_r }}R
+    </div>
+    <div class="sl">Avg P&L / trade</div>
+  </div>
+</div>
+
+<!-- Today's trade log -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <h2 style="margin:0;">Signals for {{ date }}</h2>
+    <span style="font-size:12px; color:var(--muted);">{{ trades|length }} signal{{ trades|length|pluralize }}</span>
+  </div>
+
+  {% if trades %}
+  <div style="overflow-x:auto;">
+    <table class="tl-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Logged At</th>
+          <th style="text-align:right;">Entry</th>
+          <th style="text-align:right;">SL</th>
+          <th style="text-align:right;">TP</th>
+          <th style="text-align:right;">Risk%</th>
+          <th>Status</th>
+          <th style="text-align:right;">Exit</th>
+          <th style="text-align:right;">P&L R</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trades %}
+        <tr>
+          <td><a href="/stock/{{ t.ticker }}/" style="font-weight:600;">{{ t.ticker }}</a></td>
+          <td style="color:var(--muted);">{{ t.logged_at|slice:":16" }}</td>
+          <td style="text-align:right;">{% if t.entry_price %}Rp {{ t.entry_price|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right; color:var(--red);">{% if t.sl %}Rp {{ t.sl|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right; color:var(--green);">{% if t.tp %}Rp {{ t.tp|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right;">{% if t.risk_pct %}{{ t.risk_pct }}%{% else %}—{% endif %}</td>
+          <td>
+            {% if t.status == "HIT_TP" %}
+              <span class="status-badge s-hit-tp">✅ HIT TP</span>
+            {% elif t.status == "HIT_SL" %}
+              <span class="status-badge s-hit-sl">❌ HIT SL</span>
+            {% elif t.status == "OPEN" %}
+              <span class="status-badge s-open">🔵 OPEN</span>
+            {% elif t.status == "EXPIRED" %}
+              <span class="status-badge s-expired">⏰ EXPIRED</span>
+            {% else %}
+              <span class="status-badge s-pending">🟡 PENDING</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">{% if t.exit_price %}Rp {{ t.exit_price|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right; font-weight:600;
+               color:{% if t.pnl_r and t.pnl_r > 0 %}var(--green){% elif t.pnl_r and t.pnl_r < 0 %}var(--red){% else %}var(--muted){% endif %};">
+            {% if t.pnl_r %}{% if t.pnl_r > 0 %}+{% endif %}{{ t.pnl_r }}R{% else %}—{% endif %}
+          </td>
+          <td>{% for f in t.flags %}<span class="badge badge-blue" style="margin-right:2px;">{{ f }}</span>{% endfor %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:40px; color:var(--muted);">
+    <div style="font-size:32px; margin-bottom:8px;">📭</div>
+    <div>No signals logged for {{ date }}</div>
+    <div style="font-size:12px; margin-top:4px;">Open the Screener to generate today's signals</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- 30-day history table -->
+<div class="card">
+  <h2>30-Day Signal History</h2>
+  {% if history %}
+  <div style="overflow-x:auto; max-height:420px; overflow-y:auto;">
+    <table class="tl-table">
+      <thead style="position:sticky; top:0; background:var(--surface);">
+        <tr>
+          <th>Ticker</th>
+          <th>Date</th>
+          <th style="text-align:right;">Entry</th>
+          <th style="text-align:right;">SL</th>
+          <th style="text-align:right;">TP</th>
+          <th>Status</th>
+          <th style="text-align:right;">P&L R</th>
+          <th>Flow</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in history %}
+        <tr>
+          <td><a href="/stock/{{ t.ticker }}/">{{ t.ticker }}</a></td>
+          <td style="color:var(--muted);">{{ t.signal_date }}</td>
+          <td style="text-align:right;">{% if t.entry_price %}Rp {{ t.entry_price|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right; color:var(--red);">{% if t.sl %}Rp {{ t.sl|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="text-align:right; color:var(--green);">{% if t.tp %}Rp {{ t.tp|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td>
+            {% if t.status == "HIT_TP" %}<span class="status-badge s-hit-tp">✅ TP</span>
+            {% elif t.status == "HIT_SL" %}<span class="status-badge s-hit-sl">❌ SL</span>
+            {% elif t.status == "OPEN" %}<span class="status-badge s-open">🔵 OPEN</span>
+            {% elif t.status == "EXPIRED" %}<span class="status-badge s-expired">⏰ EXP</span>
+            {% else %}<span class="status-badge s-pending">🟡 PEND</span>{% endif %}
+          </td>
+          <td style="text-align:right; font-weight:600;
+               color:{% if t.pnl_r and t.pnl_r > 0 %}var(--green){% elif t.pnl_r and t.pnl_r < 0 %}var(--red){% else %}var(--muted){% endif %};">
+            {% if t.pnl_r %}{% if t.pnl_r > 0 %}+{% endif %}{{ t.pnl_r }}R{% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px; color:var(--muted);">{{ t.flow_signal|truncatechars:24 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:32px; color:var(--muted);">No history yet. Signals will appear here after the screener runs.</div>
+  {% endif %}
+</div>
+{% endblock %}
