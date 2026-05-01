@@ -350,6 +350,29 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 if trend_ma50 and ma50 > 0: flags.append("Above MA50")
                 if vol_valid:   flags.append("High Vol")
 
+                # ── Signal grade (proxy composite score — no broker data in BT) ──
+                # Mirrors compute_composite_score() but uses only technical signals.
+                # Scoring:
+                #   POI confirmation  25 pts  (always present — it's our entry gate)
+                #   BOS               30 pts  (confirmed structure break)
+                #   IDM sweep         15 pts  (liquidity sweep before BOS)
+                #   CHoCH (no BOS)    20 pts  (weaker structure change)
+                #   Above MA20        15 pts
+                #   Above MA50        20 pts
+                #   High Volume       15 pts
+                # Grades: A ≥ 80 / B ≥ 65 / C ≥ 50 / D < 50  (scaled /1.2 → 0–100)
+                smc_pts = 0
+                if smc.get("bos"):   smc_pts = 30
+                elif smc.get("choch"): smc_pts = 20
+                if smc.get("idm"):   smc_pts += 15
+
+                proxy_raw = (25 + smc_pts
+                             + (15 if trend_ma20 else 0)
+                             + (20 if trend_ma50 and ma50 > 0 else 0)
+                             + (15 if vol_valid else 0))
+                proxy_score = min(100, round(proxy_raw / 1.2))
+                grade = "A" if proxy_score >= 80 else "B" if proxy_score >= 65 else "C" if proxy_score >= 50 else "D"
+
                 all_trades.append({
                     "ticker":      t,
                     "entry_date":  dates[entry_idx] if entry_idx < n else "",
@@ -366,6 +389,8 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                     "flags":       flags,
                     "poi_low":     round(poi_low,  2),
                     "poi_high":    round(poi_high, 2),
+                    "grade":       grade,
+                    "proxy_score": proxy_score,
                 })
 
                 in_trade_until = exit_idx   # no new trade until this one closes
@@ -409,6 +434,22 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             cur_l += 1; cur_w = 0
         max_consec_wins   = max(max_consec_wins,   cur_w)
         max_consec_losses = max(max_consec_losses, cur_l)
+
+    # ── Grade breakdown (A/B/C/D) ─────────────────────────────────────────────
+    grade_stats = {}
+    for g in ("A", "B", "C", "D"):
+        g_trades = [t for t in all_trades if t.get("grade") == g]
+        g_wins   = [t for t in g_trades  if t["outcome"] == "WIN"]
+        g_total  = len(g_trades)
+        g_pnl_r  = sum(t["pnl_r"] for t in g_trades)
+        grade_stats[g] = {
+            "trades":   g_total,
+            "wins":     len(g_wins),
+            "losses":   g_total - len(g_wins),
+            "win_rate": round(len(g_wins) / g_total * 100, 1) if g_total else 0.0,
+            "total_r":  round(g_pnl_r, 2),
+            "avg_r":    round(g_pnl_r / g_total, 3) if g_total else 0.0,
+        }
 
     # ── Monthly P&L ───────────────────────────────────────────────────────────
     monthly = {}
@@ -460,6 +501,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
         "equity_curve": eq_curve,
         "dd_curve":     dd_curve,
         "metrics":      metrics,
+        "grade_stats":  grade_stats,
         "ticker_stats": ticker_stats,
         "monthly_pnl":  monthly,
         "params": {
