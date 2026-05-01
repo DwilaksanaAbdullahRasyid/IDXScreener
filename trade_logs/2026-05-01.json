@@ -1,0 +1,141 @@
+[
+  {
+    "ticker": "AKRA",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T10:46:19",
+    "entry_price": 1580.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "Near POI"
+    ],
+    "flow_signal": "\u2b50 STRONGEST SIGNAL: Foreign + Government Convergence (Positional)",
+    "flow_quality": {
+      "quality_score": 75,
+      "label": "Clean Foreign Flow",
+      "contaminated": false,
+      "top3": [
+        "ZP",
+        "CC",
+        "AK"
+      ],
+      "tier1_count": 1,
+      "foreign_count": 2,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 90,
+    "status": "PENDING",
+    "updated_at": "2026-05-01T10:46:19",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "ELSA",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T10:46:19",
+    "entry_price": 790.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "Near POI"
+    ],
+    "flow_signal": "\u2705 FOREIGN FLOW DETECTED: Accumulation probable, watch for BOS",
+    "flow_quality": {
+      "quality_score": 75,
+      "label": "Clean Foreign Flow",
+      "contaminated": false,
+      "top3": [
+        "YU",
+        "EP",
+        "AI"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 2,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 90,
+    "status": "PENDING",
+    "updated_at": "2026-05-01T10:46:19",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "DSNG",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T10:46:19",
+    "entry_price": 1755.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "Near POI"
+    ],
+    "flow_signal": "\u2139\ufe0f Government/Pension money present \u2014 moderate confidence",
+    "flow_quality": {
+      "quality_score": 25,
+      "label": "Mixed \u2014 Low Confidence",
+      "contaminated": false,
+      "top3": [
+        "KI",
+        "DX",
+        "XL"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 0,
+      "retail_count": 1
+    },
+    "bias": "",
+    "score": 82,
+    "status": "PENDING",
+    "updated_at": "2026-05-01T10:46:19",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "PTBA",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T10:46:19",
+    "entry_price": 2870.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Near POI"
+    ],
+    "flow_signal": "\u2b50 STRONGEST SIGNAL: Foreign + Government Convergence (Positional)",
+    "flow_quality": {
+      "quality_score": 75,
+      "label": "Clean Foreign Flow",
+      "contaminated": false,
+      "top3": [
+        "AK",
+        "AG",
+        "CC"
+      ],
+      "tier1_count": 1,
+      "foreign_count": 2,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 74,
+    "status": "PENDING",
+    "updated_at": "2026-05-01T10:46:19",
+    "exit_price": null,
+    "pnl_r": null
+  }
+]
