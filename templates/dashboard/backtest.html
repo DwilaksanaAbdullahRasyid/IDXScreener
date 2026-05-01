@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}Backtest — IDX Smart Screener{% endblock %}
+{% block title %}Backtest — STIX{% endblock %}
 
 {% block extra_head %}
 <style>
   /* Backtest-specific styles */
   .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 24px;
   }
@@ -129,6 +129,7 @@
 
   @media (max-width: 900px) {
     .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .trade-table td, .trade-table th { font-size: 11px; padding: 5px 6px; }
     .grade-grid   { grid-template-columns: repeat(2, 1fr); }
     .review-section .enhance-grid { grid-template-columns: 1fr; }
   }
@@ -145,7 +146,7 @@
 <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
   <div>
     <h1>Strategy Backtest</h1>
-    <p>Walk-forward simulation · SMC + POI entry · IDX Universe (2 years daily)</p>
+    <p>Walk-forward simulation · SMC V3 · IDX Universe (4 years daily) · Partial TP exits</p>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="btn" id="runBtn" onclick="loadBacktest(false)">▶ Load Results</button>
@@ -266,14 +267,14 @@
             <th>Exit Date</th>
             <th style="text-align:right;">Shares</th>
             <th style="text-align:right;">Entry</th>
-            <th style="text-align:right;">Exit</th>
             <th style="text-align:right;">SL</th>
-            <th style="text-align:right;">TP</th>
+            <th style="text-align:center;">TP1 1R</th>
+            <th style="text-align:center;">TP2 2R</th>
+            <th style="text-align:center;">TP3 3R</th>
+            <th style="text-align:right;">Exit</th>
             <th style="text-align:right;">P&amp;L (IDR)</th>
-            <th style="text-align:right;">P&amp;L %</th>
             <th style="text-align:right;">Hold</th>
             <th>Outcome</th>
-            <th>Flags</th>
           </tr>
         </thead>
         <tbody id="tradeBody"></tbody>
@@ -513,16 +514,39 @@ function recalculateBacktest() {
   const risk_idr = capital_idr * (risk_pct / 100);
 
   // Copy the raw data and adjust trades with position sizing
+  // V3: partial exits — 1/3 position at TP1, TP2, TP3
   const allPositionSizedTrades = BT_DATA_RAW.trades.map(trade => {
-    const risk_per_trade = risk_idr;
     const price_risk = trade.entry_price - trade.sl;
-    const shares = price_risk > 0 ? Math.floor(risk_per_trade / price_risk) : 0;
-    const pnl_idr = (trade.exit_price - trade.entry_price) * shares;
+    const shares = price_risk > 0 ? Math.floor(risk_idr / price_risk) : 0;
+    const shares3     = Math.floor(shares / 3);
+    const shares_last = shares - shares3 * 2;   // handles rounding
+
+    let pnl_idr = 0;
+    if (!trade.tp1_hit) {
+      // No partial exits — full position at exit_price (SL or timeout)
+      pnl_idr = (trade.exit_price - trade.entry_price) * shares;
+    } else if (!trade.tp2_hit) {
+      // TP1 hit; remaining 2/3 at breakeven (entry) or timeout exit
+      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+              + (trade.exit_price - trade.entry_price) * (shares - shares3);
+    } else if (!trade.tp3_hit) {
+      // TP1 + TP2 hit; final 1/3 at TP1-level SL or timeout
+      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+              + (trade.tp2 - trade.entry_price) * shares3
+              + (trade.exit_price - trade.entry_price) * shares_last;
+    } else {
+      // All 3 TPs hit
+      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+              + (trade.tp2 - trade.entry_price) * shares3
+              + (trade.tp3 - trade.entry_price) * shares_last;
+    }
+
     return {
       ...trade,
-      shares: shares,
-      risk_idr: risk_per_trade,
-      pnl_idr: pnl_idr,
+      shares:      shares,
+      shares3:     shares3,
+      risk_idr:    risk_idr,
+      pnl_idr:     pnl_idr,
       pnl_idr_pct: shares > 0 ? (pnl_idr / (trade.entry_price * shares)) * 100 : 0,
     };
   });
@@ -623,34 +647,45 @@ function recalculateMetrics(origData, positionSizedTrades, capital_idr) {
   const best_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr > b.pnl_idr ? a : b) : null;
   const worst_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr < b.pnl_idr ? a : b) : null;
 
+  // TP hit rates (from raw R-based fields on filtered trade subset)
+  const tp1_hits = positionSizedTrades.filter(t => t.tp1_hit).length;
+  const tp2_hits = positionSizedTrades.filter(t => t.tp2_hit).length;
+  const tp3_hits = positionSizedTrades.filter(t => t.tp3_hit).length;
+
   return {
     trades: positionSizedTrades,
     equity_curve: eq_curve_idr,
     dd_curve: dd_curve_idr,
     metrics: {
-      total_trades: total,
-      wins: wins.length,
-      losses: losses.length,
-      win_rate: Math.round(win_rate * 10) / 10,
-      total_pnl_idr: Math.round(total_pnl_idr),
-      avg_win_idr: Math.round(avg_win_idr),
-      avg_loss_idr: Math.round(avg_loss_idr),
-      profit_factor: Math.round(profit_factor * 100) / 100,
-      max_drawdown_idr: Math.round(max_dd_idr),
-      expectancy_idr: Math.round(expectancy_idr),
-      avg_hold_days: Math.round(avg_hold * 10) / 10,
-      avg_pnl_pct: Math.round(avg_pnl_pct * 10) / 10,
-      max_consec_wins: max_consec_wins,
-      max_consec_losses: max_consec_losses,
-      tickers_tested: origData.metrics.tickers_tested,
+      total_trades:        total,
+      wins:                wins.length,
+      losses:              losses.length,
+      win_rate:            Math.round(win_rate * 10) / 10,
+      total_pnl_idr:       Math.round(total_pnl_idr),
+      avg_win_idr:         Math.round(avg_win_idr),
+      avg_loss_idr:        Math.round(avg_loss_idr),
+      profit_factor:       Math.round(profit_factor * 100) / 100,
+      max_drawdown_idr:    Math.round(max_dd_idr),
+      expectancy_idr:      Math.round(expectancy_idr),
+      avg_hold_days:       Math.round(avg_hold * 10) / 10,
+      avg_pnl_pct:         Math.round(avg_pnl_pct * 10) / 10,
+      max_consec_wins:     max_consec_wins,
+      max_consec_losses:   max_consec_losses,
+      tickers_tested:      origData.metrics.tickers_tested,
       tickers_with_trades: Object.keys(ticker_stats).length,
-      tickers_skipped: origData.metrics.tickers_skipped,
-      best_trade: best_trade,
-      worst_trade: worst_trade,
-      longest_win_days: longest_win,
-      longest_loss_days: longest_loss,
+      tickers_skipped:     origData.metrics.tickers_skipped,
+      best_trade:          best_trade,
+      worst_trade:         worst_trade,
+      longest_win_days:    longest_win,
+      longest_loss_days:   longest_loss,
       ihsg_filtered_signals: origData.metrics.ihsg_filtered_signals,
-      ihsg_filter_active: origData.metrics.ihsg_filter_active,
+      ihsg_filter_active:    origData.metrics.ihsg_filter_active,
+      tp1_hits:            tp1_hits,
+      tp2_hits:            tp2_hits,
+      tp3_hits:            tp3_hits,
+      tp1_rate:            total > 0 ? Math.round(tp1_hits / total * 1000) / 10 : 0,
+      tp2_rate:            total > 0 ? Math.round(tp2_hits / total * 1000) / 10 : 0,
+      tp3_rate:            total > 0 ? Math.round(tp3_hits / total * 1000) / 10 : 0,
     },
     ticker_stats: ticker_stats,
     monthly_pnl: monthly,
@@ -668,7 +703,7 @@ async function loadBacktest(force = false) {
   btn.textContent = force ? '⏳ Re-running…' : '⏳ Loading…';
   banner.style.display = '';
   msg.textContent = force
-    ? 'Re-running backtest on full IDX universe (2y data). This can take 2–5 minutes…'
+    ? 'Re-running V3 backtest on full IDX universe (4y data, 8 filters). This can take 5–8 minutes…'
     : 'Loading backtest results…';
 
   try {
@@ -705,15 +740,20 @@ function renderMetrics(m) {
   const pnl_color  = (m.total_pnl_idr || 0)  >= 0  ? 'var(--green)' : 'var(--red)';
   const pf_color = m.profit_factor >= 1.5 ? 'var(--green)' : m.profit_factor >= 1.0 ? 'var(--yellow)' : 'var(--red)';
 
+  const tp1r = m.tp1_rate != null ? m.tp1_rate : (m.tp1_hits != null ? fmt(m.tp1_hits / m.total_trades * 100, 1) : '—');
+  const tp2r = m.tp2_rate != null ? m.tp2_rate : '—';
+  const tp3r = m.tp3_rate != null ? m.tp3_rate : '—';
+
   const cards = [
-    { value: m.total_trades,                  label: 'Total Trades',          color: 'var(--accent)', sub: `${m.wins}W / ${m.losses}L` },
-    { value: fmt(m.win_rate, 1) + '%',         label: 'Win Rate',              color: wr_color,        sub: `Max streak ${m.max_consec_wins}W / ${m.max_consec_losses}L` },
-    { value: formatIDR(m.total_pnl_idr || 0),  label: 'Total P&L (IDR)',       color: pnl_color,       sub: `Exp: ${formatIDR(m.expectancy_idr || 0)}/trade` },
-    { value: fmt(m.profit_factor),             label: 'Profit Factor',         color: pf_color,        sub: `Avg: ${formatIDR(m.avg_win_idr || 0)} / ${formatIDR(m.avg_loss_idr || 0)}` },
-    { value: formatIDR(m.max_drawdown_idr || 0), label: 'Max Drawdown (IDR)',   color: 'var(--red)',    sub: 'from equity peak' },
-    { value: fmt(m.avg_hold_days, 1) + ' days',label: 'Avg Hold',              color: 'var(--text)',   sub: `Avg P&L ${fmt(m.avg_pnl_pct, 2)}%` },
-    { value: m.tickers_with_trades,            label: 'Tickers Traded',        color: 'var(--accent)', sub: `of ${m.tickers_tested} tested` },
-    { value: (m.ihsg_filtered_signals || 0),   label: 'Signals Skipped (IHSG)',color: 'var(--yellow)', sub: m.ihsg_filter_active ? 'IHSG filter active ✓' : 'IHSG filter inactive' },
+    { value: m.total_trades,                   label: 'Total Trades',           color: 'var(--accent)', sub: `${m.wins}W / ${m.losses}L · V3 Strategy` },
+    { value: fmt(m.win_rate, 1) + '%',          label: 'Win Rate',               color: wr_color,        sub: `Max streak ${m.max_consec_wins}W / ${m.max_consec_losses}L` },
+    { value: formatIDR(m.total_pnl_idr || 0),   label: 'Total P&L (IDR)',        color: pnl_color,       sub: `Exp: ${formatIDR(m.expectancy_idr || 0)}/trade` },
+    { value: fmt(m.profit_factor),              label: 'Profit Factor',          color: pf_color,        sub: `Avg: ${formatIDR(m.avg_win_idr || 0)} / ${formatIDR(m.avg_loss_idr || 0)}` },
+    { value: formatIDR(m.max_drawdown_idr || 0), label: 'Max Drawdown (IDR)',    color: 'var(--red)',     sub: 'from equity peak' },
+    { value: fmt(m.avg_hold_days, 1) + ' days', label: 'Avg Hold',               color: 'var(--text)',   sub: `Avg P&L ${fmt(m.avg_pnl_pct, 2)}%` },
+    { value: `${tp1r}% / ${tp2r}% / ${tp3r}%`,  label: 'TP1 / TP2 / TP3 Hit %', color: 'var(--green)',  sub: 'Partial exit hit rates' },
+    { value: m.tickers_with_trades,             label: 'Tickers Traded',         color: 'var(--accent)', sub: `of ${m.tickers_tested} tested` },
+    { value: (m.ihsg_filtered_signals || 0),    label: 'Signals Skipped (IHSG)', color: 'var(--yellow)', sub: m.ihsg_filter_active ? 'IHSG filter active ✓' : 'IHSG filter inactive' },
   ];
 
   document.getElementById('metricsGrid').innerHTML = cards.map(c => `
@@ -847,6 +887,16 @@ function renderTrades() {
     const flags  = (t.flags || []).map(f =>
       `<span class="badge badge-blue" style="margin-right:2px;">${f}</span>`
     ).join('');
+    const tp1Cell = t.tp1_hit
+      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp1||0).toLocaleString()}</span>`
+      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
+    const tp2Cell = t.tp2_hit
+      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp2||0).toLocaleString()}</span>`
+      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
+    const tp3Cell = t.tp3_hit
+      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp3||0).toLocaleString()}</span>`
+      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
+
     return `
       <tr>
         <td><a href="/stock/${t.ticker}/">${t.ticker}</a></td>
@@ -854,29 +904,36 @@ function renderTrades() {
         <td>${t.entry_date}</td>
         <td>${t.exit_date}</td>
         <td style="text-align:right;">${t.shares ? t.shares.toLocaleString() + ' sh' : '—'}</td>
-        <td style="text-align:right;">Rp ${t.entry_price.toLocaleString()}</td>
-        <td style="text-align:right;">Rp ${t.exit_price.toLocaleString()}</td>
-        <td style="text-align:right; color:var(--red);">Rp ${t.sl.toLocaleString()}</td>
-        <td style="text-align:right; color:var(--green);">Rp ${t.tp.toLocaleString()}</td>
+        <td style="text-align:right;">Rp ${(t.entry_price||0).toLocaleString()}</td>
+        <td style="text-align:right; color:var(--red);">Rp ${(t.sl||0).toLocaleString()}</td>
+        <td style="text-align:center;">${tp1Cell}</td>
+        <td style="text-align:center;">${tp2Cell}</td>
+        <td style="text-align:center;">${tp3Cell}</td>
+        <td style="text-align:right;">Rp ${(t.exit_price||0).toLocaleString()}</td>
         <td style="text-align:right; font-weight:600; color:${pnlColor};">${formatIDR(t.pnl_idr || 0)}</td>
-        <td style="text-align:right; color:${pnlColor};">${(t.pnl_idr_pct || 0) > 0 ? '+' : ''}${fmt(t.pnl_idr_pct || 0, 2)}%</td>
         <td style="text-align:right;">${t.hold_days}d</td>
         <td>${badge}</td>
-        <td>${flags}</td>
       </tr>`;
   }).join('');
 }
 
 function renderParams(p) {
+  const tpStr = p.tp1_r != null
+    ? `${p.tp1_r}R / ${p.tp2_r}R / ${p.tp3_r}R (partial 1/3 each)`
+    : (p.tp_r ? p.tp_r + 'R' : '—');
   const items = [
-    ['TP Multiple', p.tp_r + 'R'],
-    ['SL Factor', (p.sl_factor * 100).toFixed(1) + '% below POI'],
-    ['Max Hold', p.max_hold + ' bars'],
-    ['Window', p.window + ' bars'],
-    ['Step', p.step + ' bars'],
-    ['POI Band', '±' + (p.poi_band * 100).toFixed(0) + '%'],
-    ['Universe', p.universe + ' stocks'],
-    ['IHSG Filter', p.ihsg_filter || 'close > MA20 & MA50'],
+    ['TP Levels',    tpStr],
+    ['SL Factor',    (p.sl_factor * 100).toFixed(1) + '% below POI'],
+    ['Max Hold',     (p.max_hold || 40) + ' bars'],
+    ['Window',       p.window + ' bars'],
+    ['Step',         p.step + ' bars'],
+    ['POI Band',     '±' + (p.poi_band * 100).toFixed(0) + '%'],
+    ['Weekly Window', (p.weekly_window || 8) + ' weeks'],
+    ['Universe',     p.universe + ' stocks'],
+    ['Period',       p.period || '4y'],
+    ['Entry Filters', p.entry_filters || '8 hard filters'],
+    ['IHSG Filter',  p.ihsg_filter || 'score ≥ 50'],
+    ['Version',      p.version || 'v3'],
   ];
   document.getElementById('paramList').innerHTML = items.map(([k, v]) =>
     `<span class="param-badge">${k}: <strong>${v}</strong></span>`
