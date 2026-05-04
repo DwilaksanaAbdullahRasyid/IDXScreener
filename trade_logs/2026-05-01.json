@@ -29,8 +29,8 @@
     },
     "bias": "",
     "score": 90,
-    "status": "PENDING",
-    "updated_at": "2026-05-01T10:46:19",
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
     "exit_price": null,
     "pnl_r": null
   },
@@ -64,8 +64,8 @@
     },
     "bias": "",
     "score": 90,
-    "status": "PENDING",
-    "updated_at": "2026-05-01T10:46:19",
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
     "exit_price": null,
     "pnl_r": null
   },
@@ -99,8 +99,8 @@
     },
     "bias": "",
     "score": 82,
-    "status": "PENDING",
-    "updated_at": "2026-05-01T10:46:19",
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
     "exit_price": null,
     "pnl_r": null
   },
@@ -133,8 +133,220 @@
     },
     "bias": "",
     "score": 74,
-    "status": "PENDING",
-    "updated_at": "2026-05-01T10:46:19",
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "SRTG",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 1795.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "High Vol",
+      "Near POI"
+    ],
+    "flow_signal": "\u2705 FOREIGN FLOW DETECTED: Accumulation probable, watch for BOS",
+    "flow_quality": {
+      "quality_score": 50,
+      "label": "Foreign (Retail Contaminated)",
+      "contaminated": true,
+      "top3": [
+        "YU",
+        "BK",
+        "YP"
+      ],
+      "tier1_count": 1,
+      "foreign_count": 2,
+      "retail_count": 1
+    },
+    "bias": "",
+    "score": 82,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "SMSM",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 1800.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "High Vol",
+      "Near POI"
+    ],
+    "flow_signal": "\u2139\ufe0f Government/Pension money present \u2014 moderate confidence",
+    "flow_quality": {
+      "quality_score": 40,
+      "label": "Institutional (BUMN)",
+      "contaminated": false,
+      "top3": [
+        "PD",
+        "CC",
+        "AR"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 0,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 81,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "BBTN",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 1355.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "Near POI"
+    ],
+    "flow_signal": "\u2139\ufe0f Government/Pension money present \u2014 moderate confidence",
+    "flow_quality": {
+      "quality_score": 40,
+      "label": "Institutional (BUMN)",
+      "contaminated": false,
+      "top3": [
+        "NI",
+        "CC",
+        "DR"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 1,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 75,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "INKP",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 9750.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "High Vol",
+      "Near POI"
+    ],
+    "flow_signal": "\u2139\ufe0f Government/Pension money present \u2014 moderate confidence",
+    "flow_quality": {
+      "quality_score": 40,
+      "label": "Institutional (BUMN)",
+      "contaminated": false,
+      "top3": [
+        "ZP",
+        "CC",
+        "IF"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 1,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 75,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "HRUM",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 995.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "High Vol",
+      "Near POI"
+    ],
+    "flow_signal": "\u2705 FOREIGN FLOW DETECTED: Accumulation probable, watch for BOS",
+    "flow_quality": {
+      "quality_score": 50,
+      "label": "Foreign (Retail Contaminated)",
+      "contaminated": true,
+      "top3": [
+        "RX",
+        "YP",
+        "AK"
+      ],
+      "tier1_count": 1,
+      "foreign_count": 2,
+      "retail_count": 1
+    },
+    "bias": "",
+    "score": 61,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
+    "exit_price": null,
+    "pnl_r": null
+  },
+  {
+    "ticker": "HMSP",
+    "signal_date": "2026-05-01",
+    "logged_at": "2026-05-01T12:10:57",
+    "entry_price": 750.0,
+    "sl": null,
+    "tp": null,
+    "poi_low": null,
+    "poi_high": null,
+    "risk_pct": null,
+    "flags": [
+      "Uptrend",
+      "High Vol"
+    ],
+    "flow_signal": "\u2139\ufe0f Government/Pension money present \u2014 moderate confidence",
+    "flow_quality": {
+      "quality_score": 40,
+      "label": "Institutional (BUMN)",
+      "contaminated": false,
+      "top3": [
+        "CC",
+        "SQ",
+        "LG"
+      ],
+      "tier1_count": 0,
+      "foreign_count": 1,
+      "retail_count": 0
+    },
+    "bias": "",
+    "score": 58,
+    "status": "EXPIRED",
+    "updated_at": "2026-05-01T22:54:05",
     "exit_price": null,
     "pnl_r": null
   }

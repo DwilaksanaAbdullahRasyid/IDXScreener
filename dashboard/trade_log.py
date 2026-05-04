@@ -83,28 +83,34 @@ def save_daily_signals(candidates: list, date_str: str | None = None) -> int:
         if not ticker or ticker in existing_tickers:
             continue  # already tracked — don't overwrite status
 
+        composite = cand.get("composite", {}) or {}
         entry = {
-            "ticker":       ticker,
-            "signal_date":  date_str,
-            "logged_at":    now_str,
+            "ticker":            ticker,
+            "signal_date":       date_str,
+            "logged_at":         now_str,
             # Prices
-            "entry_price":  cand.get("entry_price") or cand.get("price") or cand.get("close"),
-            "sl":           cand.get("sl") or cand.get("stop_loss"),
-            "tp":           cand.get("tp") or cand.get("take_profit"),
-            "poi_low":      cand.get("poi_low"),
-            "poi_high":     cand.get("poi_high"),
-            "risk_pct":     cand.get("risk_pct"),
+            "entry_price":       cand.get("entry_price") or cand.get("price") or cand.get("close"),
+            "sl":                cand.get("sl") or cand.get("stop_loss"),
+            "tp":                cand.get("tp") or cand.get("take_profit"),
+            "poi_low":           cand.get("poi_low"),
+            "poi_high":          cand.get("poi_high"),
+            "risk_pct":          cand.get("risk_pct"),
+            # V3.9 Grade + Confluence (aligned with backtest grading system)
+            "grade":             composite.get("grade", "D"),
+            "confluence_score":  composite.get("confluence_score"),
+            "composite_score":   composite.get("composite_score"),
+            "flow_confirmed":    bool(cand.get("flow", {}).get("eligible")) if isinstance(cand.get("flow"), dict) else False,
             # Signal context
-            "flags":        cand.get("flags", []),
-            "flow_signal":  cand.get("flow", {}).get("signal", "") if isinstance(cand.get("flow"), dict) else "",
-            "flow_quality": cand.get("flow_quality"),
-            "bias":         cand.get("bias", ""),
-            "score":        cand.get("score"),
+            "flags":             cand.get("flags", []),
+            "flow_signal":       cand.get("flow", {}).get("signal", "") if isinstance(cand.get("flow"), dict) else "",
+            "flow_quality":      cand.get("flow_quality"),
+            "bias":              cand.get("bias", ""),
+            "score":             cand.get("score"),
             # Status
-            "status":       "PENDING",
-            "updated_at":   now_str,
-            "exit_price":   None,
-            "pnl_r":        None,
+            "status":            "PENDING",
+            "updated_at":        now_str,
+            "exit_price":        None,
+            "pnl_r":             None,
         }
         existing.append(entry)
         existing_tickers.add(ticker)

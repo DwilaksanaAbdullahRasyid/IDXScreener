@@ -27,6 +27,19 @@
   .tl-table td { padding: 8px 12px; font-size: 12px; }
   .tl-table th { font-size: 10px; padding: 7px 12px; }
 
+  /* Grade badges — aligned with V3.9 confluence thresholds */
+  .grade-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-size: 11px; font-weight: 800; letter-spacing: 0;
+  }
+  .grade-a { background: rgba(0,230,118,0.18);  color: #00e676; border: 1px solid rgba(0,230,118,0.40); }
+  .grade-b { background: rgba(99,179,255,0.18); color: #63b3ff; border: 1px solid rgba(99,179,255,0.40); }
+  .grade-c { background: rgba(255,215,0,0.18);  color: #ffd700; border: 1px solid rgba(255,215,0,0.40); }
+  .grade-d { background: rgba(166,132,152,0.18);color: #a68498; border: 1px solid rgba(166,132,152,0.40); }
+  /* Confirmed (smart money flow verified) indicator */
+  .confirmed-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#00e676; margin-left:4px; vertical-align:middle; title:"Flow confirmed"; }
+
   @media (max-width: 768px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
 {% endblock %}
@@ -86,6 +99,7 @@
       <thead>
         <tr>
           <th>Ticker</th>
+          <th style="text-align:center;">Grade</th>
           <th>Logged At</th>
           <th style="text-align:right;">Entry</th>
           <th style="text-align:right;">SL</th>
@@ -100,7 +114,18 @@
       <tbody>
         {% for t in trades %}
         <tr>
-          <td><a href="/stock/{{ t.ticker }}/" style="font-weight:600;">{{ t.ticker }}</a></td>
+          <td><a href="/stock/{{ t.ticker }}/" style="font-weight:600;">{{ t.ticker }}</a>{% if t.flow_confirmed %}<span class="confirmed-dot" title="Smart money confirmed"></span>{% endif %}</td>
+          <td style="text-align:center;">
+            {% if t.grade == "A" %}
+              <span class="grade-badge grade-a" title="Grade A — Confluence {{ t.confluence_score }}">A</span>
+            {% elif t.grade == "B" %}
+              <span class="grade-badge grade-b" title="Grade B — Confluence {{ t.confluence_score }}">B</span>
+            {% elif t.grade == "C" %}
+              <span class="grade-badge grade-c" title="Grade C — Confluence {{ t.confluence_score }}">C</span>
+            {% else %}
+              <span class="grade-badge grade-d" title="Grade D — Confluence {{ t.confluence_score }}">D</span>
+            {% endif %}
+          </td>
           <td style="color:var(--muted);">{{ t.logged_at|slice:":16" }}</td>
           <td style="text-align:right;">{% if t.entry_price %}Rp {{ t.entry_price|floatformat:0 }}{% else %}—{% endif %}</td>
           <td style="text-align:right; color:var(--red);">{% if t.sl %}Rp {{ t.sl|floatformat:0 }}{% else %}—{% endif %}</td>
@@ -148,6 +173,7 @@
       <thead style="position:sticky; top:0; background:var(--surface);">
         <tr>
           <th>Ticker</th>
+          <th style="text-align:center;">Grade</th>
           <th>Date</th>
           <th style="text-align:right;">Entry</th>
           <th style="text-align:right;">SL</th>
@@ -160,7 +186,14 @@
       <tbody>
         {% for t in history %}
         <tr>
-          <td><a href="/stock/{{ t.ticker }}/">{{ t.ticker }}</a></td>
+          <td><a href="/stock/{{ t.ticker }}/">{{ t.ticker }}</a>{% if t.flow_confirmed %}<span class="confirmed-dot" title="Smart money confirmed"></span>{% endif %}</td>
+          <td style="text-align:center;">
+            {% if t.grade == "A" %}<span class="grade-badge grade-a" title="Confluence {{ t.confluence_score }}">A</span>
+            {% elif t.grade == "B" %}<span class="grade-badge grade-b" title="Confluence {{ t.confluence_score }}">B</span>
+            {% elif t.grade == "C" %}<span class="grade-badge grade-c" title="Confluence {{ t.confluence_score }}">C</span>
+            {% elif t.grade == "D" %}<span class="grade-badge grade-d" title="Confluence {{ t.confluence_score }}">D</span>
+            {% else %}<span style="color:var(--muted); font-size:11px;">—</span>{% endif %}
+          </td>
           <td style="color:var(--muted);">{{ t.signal_date }}</td>
           <td style="text-align:right;">{% if t.entry_price %}Rp {{ t.entry_price|floatformat:0 }}{% else %}—{% endif %}</td>
           <td style="text-align:right; color:var(--red);">{% if t.sl %}Rp {{ t.sl|floatformat:0 }}{% else %}—{% endif %}</td>

@@ -33,6 +33,7 @@ def _get_cached_bt_stats():
             "win_rate":      round(m.get("win_rate",      0), 1),
             "total_trades":  m.get("total_trades",  0),
             "profit_factor": round(m.get("profit_factor", 0), 2),
+            "avg_win_r":     round(m.get("avg_win_r",     0), 2),
             "period":        p.get("period",  "—"),
             "version":       p.get("version", "—"),
         }

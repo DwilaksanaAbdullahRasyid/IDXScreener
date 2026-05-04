@@ -12,6 +12,7 @@ analysis.py — All financial logic for the IDX Screener:
 """
 
 import json
+import logging
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -19,6 +20,12 @@ import requests
 import random
 import time
 import datetime
+
+# Suppress yfinance WARNING-level "possibly delisted" false positives that appear
+# on large IDX batch downloads due to Yahoo Finance throttling.
+# _download_chunked() already prevents the underlying throttle; this silences
+# any residual noise. Genuine errors (level ERROR) are still surfaced.
+logging.getLogger("yfinance").setLevel(logging.ERROR)
 from functools import lru_cache
 from pathlib import Path
 
@@ -67,7 +74,7 @@ IDX_ADDITIONAL = [
     # Telco / Media
     "ISAT", "MNCN", "SCMA", "DNET",
     # Industrials / Manufacturing
-    "AUTO", "SMSM", "JPFA", "TURI", "ABMM", "BISI",
+    "AUTO", "SMSM", "JPFA", "ABMM", "BISI",
     # New Economy / EV Metals
     "AMMN", "MBMA", "NCKL",
     # Entertainment
@@ -846,6 +853,47 @@ def _is_rejection_candle(opens, closes, highs, lows, idx: int) -> bool:
     return False
 
 
+# ── Chunked batch downloader ─────────────────────────────────────────────────
+# yfinance can return false "possibly delisted" warnings when downloading
+# 80+ IDX tickers in a single request due to Yahoo Finance throttling.
+# Splitting into chunks of 20 keeps each request small enough to succeed.
+_DOWNLOAD_CHUNK = 20
+
+def _download_chunked(tickers_jk: list, period: str, interval: str) -> pd.DataFrame:
+    """
+    Downloads OHLCV for *tickers_jk* in chunks of _DOWNLOAD_CHUNK to prevent
+    the Yahoo Finance throttle that produces false 'possibly delisted' warnings
+    on large IDX batch requests.
+
+    Returns a MultiIndex (ticker → OHLCV column) DataFrame identical to what
+    yf.download(..., group_by='ticker') produces.
+    """
+    frames = []
+    for i in range(0, len(tickers_jk), _DOWNLOAD_CHUNK):
+        chunk = tickers_jk[i : i + _DOWNLOAD_CHUNK]
+        try:
+            df = yf.download(
+                " ".join(chunk), period=period, interval=interval,
+                group_by="ticker", progress=False, auto_adjust=True,
+            )
+            if df.empty:
+                continue
+            # Single-ticker download has flat columns — wrap in MultiIndex
+            if not isinstance(df.columns, pd.MultiIndex) and len(chunk) == 1:
+                df.columns = pd.MultiIndex.from_tuples(
+                    [(chunk[0], c) for c in df.columns]
+                )
+            frames.append(df)
+        except Exception:
+            pass   # chunk failed; affected tickers will be skipped downstream
+
+    if not frames:
+        return pd.DataFrame()
+    result = pd.concat(frames, axis=1)
+    # Drop any accidental duplicate columns
+    return result.loc[:, ~result.columns.duplicated()]
+
+
 # ── Market Screener ──────────────────────────────────────────────────────────
 def screen_market():
     """
@@ -864,18 +912,19 @@ def screen_market():
     if cached:
         return cached
 
+    # ── IHSG daily gate — checked once, applied in routing block ────────────────
+    ihsg_daily    = fetch_ihsg()
+    ihsg_daily_ok = ihsg_daily.get("score", 0) >= 50   # Bull or Strong Bull only
+
     # Exclude FCA / suspended stocks
     fca_set = fetch_fca_suspended_stocks()
     universe = [t for t in IDX_UNIVERSE if t not in fca_set]
 
-    tickers     = [f"{t}.JK" for t in universe]
-    tickers_str = " ".join(tickers)
+    tickers = [f"{t}.JK" for t in universe]
 
     try:
-        data_1d = yf.download(tickers_str, period="3mo", interval="1d",
-                               group_by="ticker", progress=False, auto_adjust=True)
-        data_1h = yf.download(tickers_str, period="1mo", interval="1h",
-                               group_by="ticker", progress=False, auto_adjust=True)
+        data_1d = _download_chunked(tickers, period="3mo", interval="1d")
+        data_1h = _download_chunked(tickers, period="1mo", interval="1h")
     except Exception as e:
         return {"error": f"Batch download failed: {str(e)}"}
 
@@ -898,29 +947,57 @@ def screen_market():
         if len(df_1d) < 20 or len(df_1h) < 20:
             continue
 
-        # Daily trend/MA check (structural — stays on 1D)
+        # ── Daily trend check (MA20 — structural direction) ───────────────────
         tv = validate_trend_volume(df_1d)
+        if not tv["trend_valid"]:
+            continue   # price below daily MA20 → downtrend, skip
 
         # ── 1H SMC bias (BOS/CHoCH on hourly structure) ──────────────────────
+        # 1H is used for DIRECTION only — not for POI proximity.
         smc_1h = extract_smc(df_1h, "1H")
         if smc_1h.get("bias") != "Bullish":
             continue
 
-        # ── 1H entry mechanism — all checks on hourly bars ───────────────────
+        # ── 4H SMC: trend bias + POI (resample from 1H — no extra request) ───
+        smc_4h_bonus = {}
+        df_4h        = pd.DataFrame()
+        try:
+            df_4h = df_1h.resample("4h").agg({
+                "Open": "first", "High": "max", "Low": "min",
+                "Close": "last", "Volume": "sum",
+            }).dropna()
+            if len(df_4h) >= 10:
+                smc_4h_bonus = extract_smc(df_4h, "4H")
+        except Exception:
+            pass
+        trend_4h_bullish = smc_4h_bonus.get("bias") == "Bullish"
+
+        # ── 4H MA20 trend confirmation ────────────────────────────────────────
+        trend_4h_ma20 = False
+        if len(df_4h) >= 20:
+            close_4h      = df_4h["Close"].astype(float)
+            ma20_4h       = float(close_4h.rolling(20).mean().iloc[-1])
+            trend_4h_ma20 = bool(float(close_4h.iloc[-1]) > ma20_4h)
+
+        # Dual MA20 hard gate: price must be above MA20 on BOTH daily AND 4H
+        if not trend_4h_ma20:
+            continue   # 4H shows downtrend — skip
+
+        # ── 1H price + 4H POI (4H is the ONLY demand zone reference) ─────────
         curr_price_1h = float(df_1h["Close"].iloc[-1])
-        poi_low       = smc_1h.get("poi_low",  0)
-        poi_high      = smc_1h.get("poi_high", 0)
+        poi_low_4h    = smc_4h_bonus.get("poi_low",  0)
+        poi_high_4h   = smc_4h_bonus.get("poi_high", 0)
 
-        near_poi = (
-            poi_low > 0 and poi_high > 0
-            and curr_price_1h <= poi_high * 1.03
-            and curr_price_1h >= poi_low  * 0.97
-        )
+        def _near_poi(price, lo, hi, band=0.05):
+            return lo > 0 and hi > 0 and price <= hi * (1 + band) and price >= lo * (1 - band)
 
-        if not (tv["trend_valid"] or near_poi):
+        near_poi_4h = _near_poi(curr_price_1h, poi_low_4h, poi_high_4h)
+
+        # Entry gate: must be near 4H demand zone
+        if not near_poi_4h:
             continue
 
-        # Rejection candle on the most recent 1H bar
+        # ── Rejection candle on the most recent 1H bar ────────────────────────
         opens_1h  = df_1h["Open"].values.astype(float)
         closes_1h = df_1h["Close"].values.astype(float)
         highs_1h  = df_1h["High"].values.astype(float)
@@ -929,20 +1006,26 @@ def screen_market():
         if not rejection_1h:
             continue
 
-        # Volume confirmation on 1H bars (10-period rolling average)
+        # ── Volume confirmation on 1H bars (10-period rolling average) ────────
         vol_1h   = df_1h["Volume"].values.astype(float)
         avg10_1h = float(pd.Series(vol_1h).rolling(10).mean().iloc[-1])
         vol_1h_valid = avg10_1h > 0 and bool(vol_1h[-1] > 1.1 * avg10_1h)
         if not vol_1h_valid:
             continue
 
-        flags = []
-        if near_poi:           flags.append("Near POI")
-        if rejection_1h:       flags.append("Rejection 1H")
-        if vol_1h_valid:       flags.append("Vol 1H")
-        if tv["trend_valid"]:  flags.append("Uptrend")
+        # ── Flags ─────────────────────────────────────────────────────────────
+        # All hard-gate conditions are guaranteed True at this point
+        flags = ["Near 4H POI", "Rejection 1H", "Vol 1H", "Daily > MA20", "4H > MA20"]
+        if trend_4h_bullish: flags.append("4H Bullish")
 
-        tech_score = (40 if near_poi else 0) + (30 if vol_1h_valid else 0) + (30 if tv["trend_valid"] else 0)
+        # ── Tech score ────────────────────────────────────────────────────────
+        # 4H POI (40) + trend (30) are guaranteed; volume + 4H bias are variable
+        tech_score = (
+            40                                   # 4H POI — hard gate passed
+          + (30 if vol_1h_valid    else 0)
+          + 30                                   # dual MA20 trend — hard gate passed
+          + (15 if trend_4h_bullish else 0)      # 4H SMC bias bonus
+        )
 
         technical_candidates.append({
             "ticker":     t,
@@ -951,6 +1034,8 @@ def screen_market():
             "price":      curr_price_1h,
             "flags":      flags,
             "smc":        smc_1h,
+            "smc_4h":     smc_4h_bonus,
+            "poi_4h":     {"low": poi_low_4h, "high": poi_high_4h},
             "trend_vol":  tv,
             "df_1d":      df_1d,  # keep for ATR computation (not serialised)
         })
@@ -1019,6 +1104,11 @@ def screen_market():
         )
         cand["composite"] = composite
         cand["score"]     = composite["composite_score"]
+
+        # ── IHSG gate: demote to caution when market is Bear ─────────────────────
+        if not ihsg_daily_ok:
+            caution.append(cand)
+            continue
 
         # ── Flow gate: route into the correct bucket ───────────────────────────
         if broker_data is None:
@@ -1132,11 +1222,15 @@ def screen_market():
     api_status = get_api_status()
     session    = is_valid_trading_window()
 
-    # ── Persist today's confirmed signals to the daily trade log ─────────────
-    if confirmed:
+    # ── Persist today's signals to the daily trade log ───────────────────────
+    # Save confirmed + watch so ALL grades appear in the log.
+    # confirmed = smart money verified (Grade A/B likely)
+    # watch     = no broker data yet — still valid technical setups (Grade B/C)
+    signals_to_log = confirmed + watch
+    if signals_to_log:
         try:
             from . import trade_log as _tl
-            _tl.save_daily_signals(confirmed, datetime.date.today().isoformat())
+            _tl.save_daily_signals(signals_to_log, datetime.date.today().isoformat())
         except Exception:
             pass  # never crash the screener if trade_log has an issue
 
@@ -1500,11 +1594,32 @@ def compute_composite_score(
     score += quality_pts
     breakdown["flow_quality"] = quality_pts
 
-    grade = "A" if score >= 80 else "B" if score >= 65 else "C" if score >= 50 else "D"
+    # ── V3.9 Confluence-based grade (10 binary signals → 0.0–1.0) ─────────────
+    # Mirrors the backtest's confluence gate so live screener grades align with
+    # what the backtest would assign.  Each signal is 0 or 1.
+    # (quality_raw already assigned above for the composite score computation)
+    conf_signals = [
+        smc.get("bias") == "Bullish",          # 1. SMC 1H structure bullish
+        bool(smc.get("bos")),                  # 2. Break of Structure confirmed
+        bool(smc.get("idm", 0)),               # 3. IDM liquidity sweep (smart money)
+        float(smc.get("rr", 0)) >= 2.5,        # 4. Risk:Reward ≥ 2.5
+        bool(weekly.get("aligned")),            # 5. Weekly HTF trend aligned
+        bool(rs.get("outperforming")),          # 6. Outperforming IHSG (relative strength)
+        bool(flow.get("eligible")),             # 7. Smart money flow confirmed
+        int(quality_raw) >= 50,                # 8. Institutional flow quality ≥ 50
+        tech_score >= 115,                      # 9. 4H bullish bias active (max tech score)
+        int(quality_raw) >= 70,                # 10. Premium flow (foreign/BUMN dominant)
+    ]
+    confluence = round(sum(1 for s in conf_signals if s) / 10.0, 2)
+    grade = ("A" if confluence >= 0.80
+             else "B" if confluence >= 0.60
+             else "C" if confluence >= 0.40
+             else "D")
 
     return {
-        "composite_score": score,
-        "grade":           grade,
-        "breakdown":       breakdown,
-        "max_score":       85,   # 25+20+15+10+15+15 — reflects real ceiling
+        "composite_score":  score,
+        "grade":            grade,
+        "confluence_score": confluence,
+        "breakdown":        breakdown,
+        "max_score":        85,   # 25+20+15+10+15+15 — reflects real ceiling
     }

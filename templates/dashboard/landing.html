@@ -459,9 +459,9 @@ footer {
       <div class="metric-sub">{% if bt_stats %}Walk-forward · {{ bt_stats.period }} · {{ bt_stats.total_trades }} trades{% else %}Walk-forward · Grade A signals{% endif %}</div>
     </div>
     <div class="metric-item">
-      <div class="metric-num">1.8R</div>
-      <div class="metric-lbl">Reward Target</div>
-      <div class="metric-sub">Per trade, risk-adjusted</div>
+      <div class="metric-num">{% if bt_stats and bt_stats.avg_win_r %}{{ bt_stats.avg_win_r }}R{% else %}2.0R{% endif %}</div>
+      <div class="metric-lbl">Avg Win</div>
+      <div class="metric-sub">{% if bt_stats %}Actual avg winner · {{ bt_stats.period }}{% else %}Per trade, risk-adjusted{% endif %}</div>
     </div>
     <div class="metric-item">
       <div class="metric-num">1×</div>
