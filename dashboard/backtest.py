@@ -530,7 +530,9 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 # ── Confluence signals dict (10 boolean conditions) ────────────
                 # Convert numpy bools to Python bools for JSON serialization
                 is_green_candle = bool(closes[end - 1] > opens[end - 1])
-                poi_band_tight = bool(curr_close <= (poi_low + (poi_high - poi_low) * 0.03))
+                # POI_TIGHT: within ±3% band vs ±5% entry band (precision entry)
+                poi_mid = (poi_low + poi_high) / 2
+                poi_band_tight = bool(curr_close >= poi_mid * (1 - 0.03) and curr_close <= poi_mid * (1 + 0.03))
                 vol_high = bool(vols[end - 1] > 1.5 * avg10v) if avg10v > 0 else False
                 has_bos = bool(smc.get("bos"))
                 has_idm = bool(smc.get("idm"))
@@ -549,11 +551,23 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 }
 
                 # ── Grade based on tight conditions count ────────────────────
+                # Grade A: POI_TIGHT required + 5+ total signals (strict, high quality)
+                # Grade B: 4+ signals (good, may lack poi_tight)
+                # Grade C: 2-3 signals (moderate)
+                # Grade D: 0-1 signals (low)
                 tight_count = sum(1 for v in confluence_signals.values() if v is True)
-                grade = ("A" if tight_count >= 6
-                         else "B" if tight_count >= 4
-                         else "C" if tight_count >= 2
-                         else "D")
+                has_poi_tight = confluence_signals.get("poi_tight", False)
+
+                # Enforce poi_tight for Grade A: tight entry location = higher win rate
+                if has_poi_tight and tight_count >= 5:
+                    grade = "A"
+                elif tight_count >= 4:
+                    grade = "B"
+                elif tight_count >= 2:
+                    grade = "C"
+                else:
+                    grade = "D"
+
                 confluence_score = tight_count / 10.0
 
                 # ── Position sizing (1 unit fixed for V3.1 baseline) ────────
