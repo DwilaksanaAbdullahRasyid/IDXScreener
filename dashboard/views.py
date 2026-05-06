@@ -169,9 +169,16 @@ def api_backtest(request):
     Runs (or returns cached) walk-forward backtest.
     Pass ?force=1 to bypass cache and re-run from scratch.
     """
-    force = request.GET.get("force", "0") == "1"
-    data = bt.run_backtest(force=force)
-    return JsonResponse(data)
+    try:
+        force = request.GET.get("force", "0") == "1"
+        data = bt.run_backtest(force=force)
+        return JsonResponse(data)
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
 
 
 @require_GET
