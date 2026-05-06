@@ -528,20 +528,21 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 if smc.get("idm"):  flags.append("IDM")
 
                 # ── Confluence signals dict (10 boolean conditions) ────────────
-                is_green_candle = closes[end - 1] > opens[end - 1]
-                poi_band_tight = curr_close <= (poi_low + (poi_high - poi_low) * 0.03)
-                vol_high = vols[end - 1] > 1.5 * avg10v if avg10v > 0 else False
+                # Convert numpy bools to Python bools for JSON serialization
+                is_green_candle = bool(closes[end - 1] > opens[end - 1])
+                poi_band_tight = bool(curr_close <= (poi_low + (poi_high - poi_low) * 0.03))
+                vol_high = bool(vols[end - 1] > 1.5 * avg10v) if avg10v > 0 else False
                 has_bos = bool(smc.get("bos"))
                 has_idm = bool(smc.get("idm"))
 
                 confluence_signals = {
-                    "regime_bull": regime_state in ["Bull", "Strong Bull"],
-                    "ihsg_tight": ihsg_score >= 70 if ihsg_score else False,
+                    "regime_bull": bool(regime_state in ["Bull", "Strong Bull"]),
+                    "ihsg_tight": bool(ihsg_score >= 70) if ihsg_score else False,
                     "bos": has_bos,
                     "poi_tight": poi_band_tight,
                     "rejection_green": is_green_candle,
-                    "weekly_bullish": weekly_bias == "Bullish",
-                    "ma50_above": trend_ma50,
+                    "weekly_bullish": bool(weekly_bias == "Bullish"),
+                    "ma50_above": bool(trend_ma50),
                     "idm": has_idm,
                     "volume_high": vol_high,
                     "hold_time": None,
