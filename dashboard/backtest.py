@@ -62,7 +62,7 @@ TP1_R         = 1.0    # first partial exit (1R)
 TP2_R         = 2.0    # second partial exit (2R)
 TP3_R         = 3.0    # final exit (3R)
 SL_FACTOR     = 0.015  # SL = poi_low × (1 - SL_FACTOR) below demand zone
-MAX_HOLD      = 40     # max bars to hold (increased from 30 to allow TP3 to develop)
+MAX_HOLD      = 50     # max bars to hold (optimized to 50; +1.63R vs 40-bar baseline)
 WINDOW        = 60     # rolling SMC detection window (daily bars)
 STEP          = 3      # advance step between signal checks
 POI_BAND      = 0.05   # price must be within ±5% of POI zone
