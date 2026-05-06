@@ -16,14 +16,20 @@
     margin-bottom: 20px;
     flex-wrap: wrap;
   }
-  .api-bar strong { color: var(--text); }
+
+  .api-bar strong {
+    color: var(--text);
+  }
+
   .api-bar .dot {
-    width: 8px; height: 8px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     display: inline-block;
     margin-right: 4px;
     vertical-align: middle;
   }
+
   .score-bar {
     display: inline-block;
     height: 6px;
@@ -32,12 +38,34 @@
     vertical-align: middle;
     margin-right: 6px;
   }
-  .rs-val { font-size: 11px; font-weight: 600; }
-  .atr-info { font-size: 11px; color: var(--muted); }
-  .weekly-yes { color: var(--green); font-weight: 600; }
-  .weekly-no  { color: var(--muted); }
-  th.sortable { cursor: pointer; user-select: none; }
-  th.sortable:hover { color: var(--text); }
+
+  .rs-val {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .atr-info {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .weekly-yes {
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .weekly-no {
+    color: var(--muted);
+  }
+
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  th.sortable:hover {
+    color: var(--text);
+  }
 </style>
 {% endblock %}
 
@@ -56,16 +84,18 @@
 <!-- API / Market Status bar -->
 <div class="api-bar">
   <span>
-    <span class="dot" style="background:{% if trading_session.valid %}var(--green){% else %}var(--muted){% endif %};"></span>
+    <span class="dot"
+      style="background:{% if trading_session.valid %}var(--green){% else %}var(--muted){% endif %};"></span>
     {% if trading_session.valid %}
-      <strong style="color:var(--green);">IDX Market Open</strong>
+    <strong style="color:var(--green);">IDX Market Open</strong>
     {% else %}
-      <strong>Market Closed</strong>
+    <strong>Market Closed</strong>
     {% endif %}
     {% if trading_session.session %}· {{ trading_session.session }}{% endif %}
   </span>
   <span>GoAPI quota: <strong>{{ api_calls_remaining }}/28</strong> remaining today ({{ api_calls_today }} used)</span>
-  <span>Universe: <strong>{{ universe_size }}</strong> stocks · <strong>{{ fca_excluded }}</strong> FCA/suspended excluded</span>
+  <span>Universe: <strong>{{ universe_size }}</strong> stocks · <strong>{{ fca_excluded }}</strong> FCA/suspended
+    excluded</span>
   <a href="/backtest/" style="margin-left:auto; color:var(--accent); font-size:12px;">View Backtest →</a>
 </div>
 
@@ -100,60 +130,60 @@
   <h2>Top Screener Candidates — IDX Universe · SMC + Flow + v2 Enhancements</h2>
   {% if candidates %}
   <div style="overflow-x:auto;">
-  <table>
-    <thead>
-      <tr>
-        <th>Ticker</th>
-        <th title="Composite score 0–85+">Score</th>
-        <th>Price</th>
-        <th>SMC Bias</th>
-        <th title="Weekly EMA20 alignment">Weekly</th>
-        <th title="Relative strength vs IHSG (20d)">RS vs IHSG</th>
-        <th>Flow Quality</th>
-        <th title="ATR-based stop loss">ATR SL</th>
-        <th title="ATR-based take profit">ATR TP</th>
-        <th>Flags</th>
-        <th>Flow Signal</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in candidates %}
-      <tr>
-        <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
-        <td>
-          <span class="score-bar" style="width:{{ c.score|default:0 }}px;"></span>
-          <strong>{{ c.score|default:"—" }}</strong>
-          {% if c.composite.grade %}
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th title="Composite score 0–85+">Score</th>
+          <th>Price</th>
+          <th>SMC Bias</th>
+          <th title="Weekly EMA20 alignment">Weekly</th>
+          <th title="Relative strength vs IHSG (20d)">RS vs IHSG</th>
+          <th>Flow Quality</th>
+          <th title="ATR-based stop loss">ATR SL</th>
+          <th title="ATR-based take profit">ATR TP</th>
+          <th>Flags</th>
+          <th>Flow Signal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in candidates %}
+        <tr>
+          <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
+          <td>
+            <span class="score-bar" style="width:{{ c.score|default:0 }}px;"></span>
+            <strong>{{ c.score|default:"—" }}</strong>
+            {% if c.composite.grade %}
             <span class="badge badge-blue" style="margin-left:4px; font-size:10px;">{{ c.composite.grade }}</span>
-          {% endif %}
-        </td>
-        <td>Rp {{ c.price|floatformat:0 }}</td>
-        <td>
-          {% if c.smc.bias == 'Bullish' %}
+            {% endif %}
+          </td>
+          <td>Rp {{ c.price|floatformat:0 }}</td>
+          <td>
+            {% if c.smc.bias == 'Bullish' %}
             <span class="badge badge-green">Bullish</span>
-          {% elif c.smc.bias == 'Bearish' %}
+            {% elif c.smc.bias == 'Bearish' %}
             <span class="badge badge-red">Bearish</span>
-          {% else %}
+            {% else %}
             <span class="badge">Neutral</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if c.weekly.aligned %}
+            {% endif %}
+          </td>
+          <td>
+            {% if c.weekly.aligned %}
             <span class="weekly-yes" title="Weekly EMA20 bullish aligned">✓ Aligned</span>
-          {% else %}
+            {% else %}
             <span class="weekly-no" title="Weekly EMA20 not aligned">✗ {{ c.weekly.bias|default:"—" }}</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if c.rs %}
+            {% endif %}
+          </td>
+          <td>
+            {% if c.rs %}
             <span class="rs-val" style="color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
               {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
             </span>
             <span class="atr-info"> ({{ c.rs.period_days|default:20 }}d)</span>
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if c.flow_quality %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if c.flow_quality %}
             <span style="font-size:11px; font-weight:600;
               color:{% if c.flow_quality.quality_score >= 75 %}var(--green)
                     {% elif c.flow_quality.quality_score >= 40 %}var(--yellow)
@@ -161,34 +191,34 @@
               {{ c.flow_quality.quality_score }}/100
             </span>
             <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:22 }}</div>
-          {% else %}—{% endif %}
-        </td>
-        <td class="atr-info">
-          {% if c.atr_levels.sl %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="atr-info">
+            {% if c.atr_levels.sl %}
             <span style="color:var(--red);">{{ c.atr_levels.sl|floatformat:0 }}</span>
             <div style="font-size:10px;">{{ c.atr_levels.sl_pct|floatformat:1 }}% risk</div>
-          {% else %}—{% endif %}
-        </td>
-        <td class="atr-info">
-          {% if c.atr_levels.tp %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="atr-info">
+            {% if c.atr_levels.tp %}
             <span style="color:var(--green);">{{ c.atr_levels.tp|floatformat:0 }}</span>
             <div style="font-size:10px;">{{ c.atr_levels.rr }}R</div>
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% for f in c.flags %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% for f in c.flags %}
             <span class="badge badge-blue" style="margin-right:2px; margin-bottom:2px;">{{ f }}</span>
-          {% endfor %}
-        </td>
-        <td style="font-size:11px; max-width:200px; color:var(--muted);">
-          {% if c.flow %}{{ c.flow.signal|truncatechars:50 }}{% else %}
+            {% endfor %}
+          </td>
+          <td style="font-size:11px; max-width:200px; color:var(--muted);">
+            {% if c.flow %}{{ c.flow.signal|truncatechars:50 }}{% else %}
             <span style="color:var(--yellow);">{{ c.broker_source }}</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% else %}
   <div class="empty">

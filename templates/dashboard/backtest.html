@@ -10,6 +10,7 @@
     gap: 16px;
     margin-bottom: 24px;
   }
+
   .metric-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -17,11 +18,13 @@
     padding: 16px 20px;
     text-align: center;
   }
+
   .metric-card .m-value {
     font-size: 26px;
     font-weight: 700;
     line-height: 1.2;
   }
+
   .metric-card .m-label {
     font-size: 11px;
     color: var(--muted);
@@ -29,6 +32,7 @@
     letter-spacing: 0.6px;
     margin-top: 4px;
   }
+
   .metric-card .m-sub {
     font-size: 11px;
     color: var(--muted);
@@ -36,14 +40,27 @@
   }
 
   /* Chart canvas */
-  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+  }
 
   /* Trade log table compact */
-  .trade-table td { padding: 7px 10px; font-size: 12px; }
-  .trade-table th { font-size: 10px; padding: 6px 10px; }
+  .trade-table td {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .trade-table th {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
 
   /* Run button states */
-  #runBtn.running { opacity: 0.6; pointer-events: none; }
+  #runBtn.running {
+    opacity: 0.6;
+    pointer-events: none;
+  }
 
   /* Monthly P&L heatmap */
   .month-grid {
@@ -51,6 +68,7 @@
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 8px;
   }
+
   .month-cell {
     border-radius: 6px;
     padding: 8px 6px;
@@ -60,7 +78,13 @@
   }
 
   /* Param badges */
-  .param-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .param-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
   .param-badge {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -69,70 +93,249 @@
     font-size: 11px;
     color: var(--muted);
   }
-  .param-badge strong { color: var(--text); }
+
+  .param-badge strong {
+    color: var(--text);
+  }
 
   /* Grade filter pills */
-  .grade-filter { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .grade-filter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
   .grade-pill {
-    padding: 6px 18px; border-radius: 20px; font-size: 12px; font-weight: 700;
-    cursor: pointer; border: 1px solid transparent; transition: all .15s;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .15s;
     letter-spacing: 0.4px;
   }
-  .grade-pill.all  { border-color: var(--border); color: var(--muted); }
-  .grade-pill.g-a  { border-color: rgba(0,230,118,0.35);   color: #00e676; background: rgba(0,230,118,0.07); }
-  .grade-pill.g-b  { border-color: rgba(99,179,255,0.35);  color: #63b3ff; background: rgba(99,179,255,0.07); }
-  .grade-pill.g-c  { border-color: rgba(255,215,0,0.35);   color: #ffd700; background: rgba(255,215,0,0.07); }
-  .grade-pill.g-d  { border-color: rgba(166,132,152,0.35); color: #a68498; background: rgba(166,132,152,0.07); }
-  .grade-pill.active { opacity: 1 !important; }
-  .grade-pill:not(.active) { opacity: 0.45; }
+
+  .grade-pill.all {
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .grade-pill.g-a {
+    border-color: rgba(0, 230, 118, 0.35);
+    color: #00e676;
+    background: rgba(0, 230, 118, 0.07);
+  }
+
+  .grade-pill.g-b {
+    border-color: rgba(99, 179, 255, 0.35);
+    color: #63b3ff;
+    background: rgba(99, 179, 255, 0.07);
+  }
+
+  .grade-pill.g-c {
+    border-color: rgba(255, 215, 0, 0.35);
+    color: #ffd700;
+    background: rgba(255, 215, 0, 0.07);
+  }
+
+  .grade-pill.g-d {
+    border-color: rgba(166, 132, 152, 0.35);
+    color: #a68498;
+    background: rgba(166, 132, 152, 0.07);
+  }
+
+  .grade-pill.active {
+    opacity: 1 !important;
+  }
+
+  .grade-pill:not(.active) {
+    opacity: 0.45;
+  }
 
   /* Grade stats grid */
   .grade-grid {
-    display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 14px;
   }
+
   .grade-card {
-    border-radius: var(--radius); padding: 12px 14px; text-align: center;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    text-align: center;
     border: 1px solid transparent;
   }
-  .grade-card.g-a { background: rgba(0,230,118,0.06);   border-color: rgba(0,230,118,0.2); }
-  .grade-card.g-b { background: rgba(99,179,255,0.06);  border-color: rgba(99,179,255,0.2); }
-  .grade-card.g-c { background: rgba(255,215,0,0.06);   border-color: rgba(255,215,0,0.2); }
-  .grade-card.g-d { background: rgba(166,132,152,0.06); border-color: rgba(166,132,152,0.2); }
-  .grade-card .g-label { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-  .grade-card .g-wr    { font-size: 22px; font-weight: 700; line-height: 1.1; }
-  .grade-card .g-meta  { font-size: 10px; color: var(--muted); text-transform: uppercase;
-                          letter-spacing: 0.5px; margin-top: 4px; }
-  .grade-card .g-pnl   { font-size: 11px; font-weight: 600; margin-top: 3px; }
+
+  .grade-card.g-a {
+    background: rgba(0, 230, 118, 0.06);
+    border-color: rgba(0, 230, 118, 0.2);
+  }
+
+  .grade-card.g-b {
+    background: rgba(99, 179, 255, 0.06);
+    border-color: rgba(99, 179, 255, 0.2);
+  }
+
+  .grade-card.g-c {
+    background: rgba(255, 215, 0, 0.06);
+    border-color: rgba(255, 215, 0, 0.2);
+  }
+
+  .grade-card.g-d {
+    background: rgba(166, 132, 152, 0.06);
+    border-color: rgba(166, 132, 152, 0.2);
+  }
+
+  .grade-card .g-label {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .grade-card .g-wr {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .grade-card .g-meta {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .grade-card .g-pnl {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 3px;
+  }
 
   /* Strategy Review */
-  .review-section { margin-top: 8px; }
-  .review-section h3 { font-size: 13px; color: var(--accent); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .review-section p  { font-size: 13px; color: var(--text); line-height: 1.65; margin-bottom: 8px; }
-  .review-section ul { padding-left: 18px; margin-bottom: 8px; }
-  .review-section li { font-size: 13px; color: var(--text); line-height: 1.7; }
-  .review-section .enhance-grid { display: grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:14px 0; }
+  .review-section {
+    margin-top: 8px;
+  }
+
+  .review-section h3 {
+    font-size: 13px;
+    color: var(--accent);
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .review-section p {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.65;
+    margin-bottom: 8px;
+  }
+
+  .review-section ul {
+    padding-left: 18px;
+    margin-bottom: 8px;
+  }
+
+  .review-section li {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .review-section .enhance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 14px 0;
+  }
+
   .enhance-card {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 14px 16px;
   }
-  .enhance-card .ec-icon { font-size: 22px; margin-bottom: 6px; }
-  .enhance-card .ec-title { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase;
-                             letter-spacing: 0.5px; margin-bottom: 6px; }
-  .enhance-card .ec-body  { font-size: 12px; color: var(--muted); line-height: 1.6; }
-  .tag-pill {
-    display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 700;
-    margin-right: 4px; margin-bottom: 4px; text-transform: uppercase;
+
+  .enhance-card .ec-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
   }
-  .tag-fix   { background: rgba(255,77,109,0.15);   color: var(--red); }
-  .tag-add   { background: rgba(0,230,118,0.15);    color: var(--green); }
-  .tag-combo { background: rgba(255,99,219,0.15);   color: var(--accent); }
+
+  .enhance-card .ec-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .enhance-card .ec-body {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .tag-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .tag-fix {
+    background: rgba(255, 77, 109, 0.15);
+    color: var(--red);
+  }
+
+  .tag-add {
+    background: rgba(0, 230, 118, 0.15);
+    color: var(--green);
+  }
+
+  .tag-combo {
+    background: rgba(255, 99, 219, 0.15);
+    color: var(--accent);
+  }
+
+  /* Signal badges — 10 confluence signals in trade log */
+  .sig-badge {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    margin: 1px;
+    letter-spacing: 0.2px;
+    cursor: default;
+  }
+  .sig-on  { background: rgba(0,230,118,0.20); color: #00e676; border: 1px solid rgba(0,230,118,0.40); }
+  .sig-off { background: rgba(255,255,255,0.04); color: #444; border: 1px solid rgba(255,255,255,0.08); }
 
   @media (max-width: 900px) {
-    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-    .trade-table td, .trade-table th { font-size: 11px; padding: 5px 6px; }
+    .metrics-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trade-table td,
+    .trade-table th {
+      font-size: 11px;
+      padding: 5px 6px;
+    }
   }
+
   @media (max-width: 480px) {
-    .metrics-grid { grid-template-columns: 1fr; }
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 <!-- Chart.js from CDN -->
@@ -140,15 +343,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+<div class="page-header"
+  style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
   <div>
     <h1>Strategy Backtest</h1>
-    <p>Walk-forward simulation · SMC V3.2 · IDX Universe (10 years daily) · Partial TP exits</p>
+    <p>Walk-forward simulation · IDX Universe (10 years daily)</p>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="btn" id="runBtn" onclick="loadBacktest(false)">▶ Load Results</button>
     <button class="btn" id="forceBtn" onclick="loadBacktest(true)"
-            style="background:var(--surface2); border:1px solid var(--border); color:var(--muted);">
+      style="background:var(--surface2); border:1px solid var(--border); color:var(--muted);">
       ↺ Re-run
     </button>
   </div>
@@ -164,17 +368,29 @@
 
   <!-- ── Position Sizing Controls ─────────────────────────────────────────── -->
   <div class="card" style="margin-bottom:24px; background:var(--surface2);">
-    <h3 style="margin-top:0; margin-bottom:16px; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Position Sizing</h3>
+    <h3
+      style="margin-top:0; margin-bottom:16px; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">
+      Position Sizing</h3>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
       <div>
-        <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Account Capital (IDR)</label>
-        <input type="number" id="capitalInput" value="100000000" min="1000000" step="1000000" style="width:100%; padding:10px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; font-size:13px; font-family:monospace;" onchange="recalculateBacktest()" />
-        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Current: <strong id="capitalDisplay">Rp 100,000,000</strong></div>
+        <label
+          style="display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Account
+          Capital (IDR)</label>
+        <input type="number" id="capitalInput" value="100000000" min="1000000" step="1000000"
+          style="width:100%; padding:10px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; font-size:13px; font-family:monospace;"
+          onchange="recalculateBacktest()" />
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Current: <strong id="capitalDisplay">Rp
+            100,000,000</strong></div>
       </div>
       <div>
-        <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Risk per Trade (%)</label>
-        <input type="number" id="riskInput" value="1.0" min="0.1" max="10" step="0.1" style="width:100%; padding:10px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; font-size:13px; font-family:monospace;" onchange="recalculateBacktest()" />
-        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Risk IDR: <strong id="riskDisplay">Rp 1,000,000</strong></div>
+        <label
+          style="display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Risk
+          per Trade (%)</label>
+        <input type="number" id="riskInput" value="1.0" min="0.1" max="10" step="0.1"
+          style="width:100%; padding:10px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; font-size:13px; font-family:monospace;"
+          onchange="recalculateBacktest()" />
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Risk IDR: <strong id="riskDisplay">Rp
+            1,000,000</strong></div>
       </div>
     </div>
   </div>
@@ -204,7 +420,7 @@
 
   <!-- ── Per-ticker stats ─────────────────────────────────────────────────── -->
   <div class="card" style="margin-bottom:24px;">
-    <h2>Per-Ticker Breakdown</h2>
+    <h2> Ticker Breakdown</h2>
     <table class="trade-table">
       <thead>
         <tr>
@@ -222,15 +438,23 @@
 
   <!-- ── Trade Log ──────────────────────────────────────────────────────── -->
   <div class="card">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
       <h2 style="margin:0;">Trade Log</h2>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <!-- Grade filter pills -->
+        <div class="grade-filter">
+          <span style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Grade</span>
+          <button class="grade-pill all active" onclick="setGrade(null)">ALL</button>
+          <button class="grade-pill g-a" onclick="setGrade('A')">A</button>
+          <button class="grade-pill g-b" onclick="setGrade('B')">B</button>
+          <button class="grade-pill g-c" onclick="setGrade('C')">C</button>
+          <button class="grade-pill g-d" onclick="setGrade('D')">D</button>
+        </div>
         <select id="tradeFilter" onchange="renderTrades()" style="font-size:12px; padding:4px 8px;">
           <option value="">All outcomes</option>
           <option value="WIN">Wins only</option>
           <option value="LOSS">Losses only</option>
         </select>
-        <span style="font-size:11px; color:var(--muted);">Grade: <strong id="activeGradeLabel">ALL</strong></span>
         <span id="tradeCount" style="font-size:12px; color:var(--muted);"></span>
       </div>
     </div>
@@ -240,15 +464,21 @@
           <tr>
             <th>Ticker</th>
             <th>Grade</th>
+            <th>Regime</th>
+            <th>Signals (10)</th>
+            <th style="text-align:right;">Conf</th>
+            <th style="text-align:right;">Pos%</th>
             <th>Entry Date</th>
             <th>Exit Date</th>
             <th style="text-align:right;">Shares</th>
             <th style="text-align:right;">Entry</th>
             <th style="text-align:right;">SL</th>
-            <th style="text-align:center;">TP1 1R</th>
-            <th style="text-align:center;">TP2 2R</th>
-            <th style="text-align:center;">TP3 3R</th>
+            <th style="text-align:center;">TP1</th>
+            <th style="text-align:center;">TP2</th>
+            <th style="text-align:center;">TP3</th>
             <th style="text-align:right;">Exit</th>
+            <th style="text-align:right;">Fee R</th>
+            <th style="text-align:right;">P&amp;L R</th>
             <th style="text-align:right;">P&amp;L (IDR)</th>
             <th style="text-align:right;">Hold</th>
             <th>Outcome</th>
@@ -269,389 +499,418 @@
 </div><!-- /#btContent -->
 
 <script>
-let BT_DATA = null;
-let BT_DATA_RAW = null;  // Original backtest data before position sizing
-let ACTIVE_GRADE = 'A'; // Grade A only
+  let BT_DATA = null;
+  let BT_DATA_RAW = null;  // Original backtest data before position sizing
+  let ACTIVE_GRADE = null; // null = show all grades
 
-// Grade colour map
-const GRADE_COLORS = {
-  A: { text: '#00e676', border: 'rgba(0,230,118,0.6)',  bg: 'rgba(0,230,118,0.1)' },
-  B: { text: '#63b3ff', border: 'rgba(99,179,255,0.6)', bg: 'rgba(99,179,255,0.1)' },
-  C: { text: '#ffd700', border: 'rgba(255,215,0,0.6)',  bg: 'rgba(255,215,0,0.1)' },
-  D: { text: '#a68498', border: 'rgba(166,132,152,0.6)',bg: 'rgba(166,132,152,0.1)' },
-};
-
-function gradeBadge(grade) {
-  const c = GRADE_COLORS[grade] || GRADE_COLORS.D;
-  return `<span style="display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px;
-          font-weight:800; background:${c.bg}; color:${c.text}; border:1px solid ${c.border};">${grade}</span>`;
-}
-
-// Set active grade filter and re-render
-function setGrade(g) {
-  ACTIVE_GRADE = g;
-  // Update pill states
-  document.querySelectorAll('.grade-pill').forEach(el => el.classList.remove('active'));
-  const map = { ALL: 'all', A: 'g-a', B: 'g-b', C: 'g-c', D: 'g-d' };
-  const target = document.querySelector(`.grade-pill.${map[g]}`);
-  if (target) target.classList.add('active');
-  // Re-render with current capital/risk
-  recalculateBacktest();
-}
-
-// Format IDR currency
-function formatIDR(n) {
-  if (n == null) return '—';
-  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
-}
-
-// Update capital & risk display when inputs change
-function updateInputDisplays() {
-  const capital = parseFloat(document.getElementById('capitalInput').value) || 100000000;
-  const risk_pct = parseFloat(document.getElementById('riskInput').value) || 1.0;
-  const risk_idr = capital * (risk_pct / 100);
-
-  document.getElementById('capitalDisplay').textContent = formatIDR(capital);
-  document.getElementById('riskDisplay').textContent = formatIDR(risk_idr);
-}
-
-// Recalculate backtest with new position sizing
-function recalculateBacktest() {
-  updateInputDisplays();
-
-  if (!BT_DATA_RAW) {
-    alert('Backtest data not loaded. Please load backtest first.');
-    return;
-  }
-
-  const capital = parseFloat(document.getElementById('capitalInput').value) || 100000000;
-  const risk_pct = parseFloat(document.getElementById('riskInput').value) || 1.0;
-
-  // Recalculate position sizes for each trade
-  const capital_idr = capital;
-  const risk_idr = capital_idr * (risk_pct / 100);
-
-  // Copy the raw data and adjust trades with position sizing
-  // V3: partial exits — 1/3 position at TP1, TP2, TP3
-  const allPositionSizedTrades = BT_DATA_RAW.trades.map(trade => {
-    const price_risk = trade.entry_price - trade.sl;
-    const shares = price_risk > 0 ? Math.floor(risk_idr / price_risk) : 0;
-    const shares3     = Math.floor(shares / 3);
-    const shares_last = shares - shares3 * 2;   // handles rounding
-
-    let pnl_idr = 0;
-    if (!trade.tp1_hit) {
-      // No partial exits — full position at exit_price (SL or timeout)
-      pnl_idr = (trade.exit_price - trade.entry_price) * shares;
-    } else if (!trade.tp2_hit) {
-      // TP1 hit; remaining 2/3 at breakeven (entry) or timeout exit
-      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
-              + (trade.exit_price - trade.entry_price) * (shares - shares3);
-    } else if (!trade.tp3_hit) {
-      // TP1 + TP2 hit; final 1/3 at TP1-level SL or timeout
-      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
-              + (trade.tp2 - trade.entry_price) * shares3
-              + (trade.exit_price - trade.entry_price) * shares_last;
-    } else {
-      // All 3 TPs hit
-      pnl_idr = (trade.tp1 - trade.entry_price) * shares3
-              + (trade.tp2 - trade.entry_price) * shares3
-              + (trade.tp3 - trade.entry_price) * shares_last;
-    }
-
-    return {
-      ...trade,
-      shares:      shares,
-      shares3:     shares3,
-      risk_idr:    risk_idr,
-      pnl_idr:     pnl_idr,
-      pnl_idr_pct: shares > 0 ? (pnl_idr / (trade.entry_price * shares)) * 100 : 0,
-    };
-  });
-
-  // Apply Grade A filter for metrics / charts / tables
-  const positionSizedTrades = allPositionSizedTrades.filter(t => t.grade === 'A');
-
-  // Rebuild metrics with position-sized values
-  const positionSizedData = recalculateMetrics(BT_DATA_RAW, positionSizedTrades, capital_idr);
-  BT_DATA = positionSizedData;
-
-  // Re-render everything
-  renderMetrics(positionSizedData.metrics);
-  renderCharts(positionSizedData.equity_curve, positionSizedData.dd_curve);
-  renderMonthly(positionSizedData.monthly_pnl);
-  renderTickerStats(positionSizedData.ticker_stats);
-  renderTrades();
-}
-
-// Recalculate all metrics based on position-sized trades
-function recalculateMetrics(origData, positionSizedTrades, capital_idr) {
-  const wins = positionSizedTrades.filter(t => t.outcome === 'WIN');
-  const losses = positionSizedTrades.filter(t => t.outcome === 'LOSS');
-  const total = positionSizedTrades.length;
-
-  // Calculate metrics in IDR
-  const total_pnl_idr = positionSizedTrades.reduce((sum, t) => sum + t.pnl_idr, 0);
-  const win_pnl_idr = wins.reduce((sum, t) => sum + t.pnl_idr, 0);
-  const loss_pnl_idr = losses.reduce((sum, t) => sum + t.pnl_idr, 0);
-
-  const win_rate = total > 0 ? (wins.length / total * 100) : 0;
-  const avg_win_idr = wins.length > 0 ? (win_pnl_idr / wins.length) : 0;
-  const avg_loss_idr = losses.length > 0 ? (loss_pnl_idr / losses.length) : 0;
-  const gross_profit = win_pnl_idr;
-  const gross_loss = Math.abs(loss_pnl_idr);
-  const profit_factor = gross_loss > 0 ? (gross_profit / gross_loss) : 0;
-  const expectancy_idr = total > 0 ? (total_pnl_idr / total) : 0;
-  const avg_hold = total > 0 ? (positionSizedTrades.reduce((sum, t) => sum + t.hold_days, 0) / total) : 0;
-  const avg_pnl_pct = total > 0 ? (positionSizedTrades.reduce((sum, t) => sum + t.pnl_idr_pct, 0) / total) : 0;
-
-  // Equity curve in IDR
-  let equity = 0;
-  const eq_curve_idr = [];
-  for (const t of positionSizedTrades) {
-    equity += t.pnl_idr;
-    eq_curve_idr.push(Math.round(equity));
-  }
-
-  // Drawdown in IDR
-  let peak = 0;
-  const dd_curve_idr = [];
-  for (const eq of eq_curve_idr) {
-    peak = Math.max(peak, eq);
-    dd_curve_idr.push(peak - eq);
-  }
-  const max_dd_idr = Math.max(...dd_curve_idr, 0);
-
-  // Consecutive streaks
-  let max_consec_wins = 0, max_consec_losses = 0, cur_w = 0, cur_l = 0;
-  for (const tr of positionSizedTrades) {
-    if (tr.outcome === 'WIN') {
-      cur_w += 1; cur_l = 0;
-    } else {
-      cur_l += 1; cur_w = 0;
-    }
-    max_consec_wins = Math.max(max_consec_wins, cur_w);
-    max_consec_losses = Math.max(max_consec_losses, cur_l);
-  }
-
-  // Monthly P&L in IDR
-  const monthly = {};
-  for (const tr of positionSizedTrades) {
-    const month = tr.entry_date.substring(0, 7);
-    monthly[month] = Math.round((monthly[month] || 0) + tr.pnl_idr);
-  }
-
-  // Per-ticker breakdown
-  const ticker_stats = {};
-  for (const tr of positionSizedTrades) {
-    const ts = ticker_stats[tr.ticker] || { wins: 0, losses: 0, total_pnl_idr: 0, trades: 0 };
-    ts.trades += 1;
-    ts.total_pnl_idr = Math.round(ts.total_pnl_idr + tr.pnl_idr);
-    if (tr.outcome === 'WIN') {
-      ts.wins += 1;
-    } else {
-      ts.losses += 1;
-    }
-    ticker_stats[tr.ticker] = ts;
-  }
-
-  const longest_win = Math.max(...(wins.map(t => t.hold_days) || [0]), 0);
-  const longest_loss = Math.max(...(losses.map(t => t.hold_days) || [0]), 0);
-  const best_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr > b.pnl_idr ? a : b) : null;
-  const worst_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr < b.pnl_idr ? a : b) : null;
-
-  // TP hit rates (from raw R-based fields on filtered trade subset)
-  const tp1_hits = positionSizedTrades.filter(t => t.tp1_hit).length;
-  const tp2_hits = positionSizedTrades.filter(t => t.tp2_hit).length;
-  const tp3_hits = positionSizedTrades.filter(t => t.tp3_hit).length;
-
-  return {
-    trades: positionSizedTrades,
-    equity_curve: eq_curve_idr,
-    dd_curve: dd_curve_idr,
-    metrics: {
-      total_trades:        total,
-      wins:                wins.length,
-      losses:              losses.length,
-      win_rate:            Math.round(win_rate * 10) / 10,
-      total_pnl_idr:       Math.round(total_pnl_idr),
-      avg_win_idr:         Math.round(avg_win_idr),
-      avg_loss_idr:        Math.round(avg_loss_idr),
-      profit_factor:       Math.round(profit_factor * 100) / 100,
-      max_drawdown_idr:    Math.round(max_dd_idr),
-      expectancy_idr:      Math.round(expectancy_idr),
-      avg_hold_days:       Math.round(avg_hold * 10) / 10,
-      avg_pnl_pct:         Math.round(avg_pnl_pct * 10) / 10,
-      max_consec_wins:     max_consec_wins,
-      max_consec_losses:   max_consec_losses,
-      tickers_tested:      origData.metrics.tickers_tested,
-      tickers_with_trades: Object.keys(ticker_stats).length,
-      tickers_skipped:     origData.metrics.tickers_skipped,
-      best_trade:          best_trade,
-      worst_trade:         worst_trade,
-      longest_win_days:    longest_win,
-      longest_loss_days:   longest_loss,
-      ihsg_filtered_signals: origData.metrics.ihsg_filtered_signals,
-      ihsg_filter_active:    origData.metrics.ihsg_filter_active,
-      tp1_hits:            tp1_hits,
-      tp2_hits:            tp2_hits,
-      tp3_hits:            tp3_hits,
-      tp1_rate:            total > 0 ? Math.round(tp1_hits / total * 1000) / 10 : 0,
-      tp2_rate:            total > 0 ? Math.round(tp2_hits / total * 1000) / 10 : 0,
-      tp3_rate:            total > 0 ? Math.round(tp3_hits / total * 1000) / 10 : 0,
-    },
-    ticker_stats: ticker_stats,
-    monthly_pnl: monthly,
-    params: origData.params,
+  // Grade colour map
+  const GRADE_COLORS = {
+    A: { text: '#00e676', border: 'rgba(0,230,118,0.6)', bg: 'rgba(0,230,118,0.1)' },
+    B: { text: '#63b3ff', border: 'rgba(99,179,255,0.6)', bg: 'rgba(99,179,255,0.1)' },
+    C: { text: '#ffd700', border: 'rgba(255,215,0,0.6)', bg: 'rgba(255,215,0,0.1)' },
+    D: { text: '#a68498', border: 'rgba(166,132,152,0.6)', bg: 'rgba(166,132,152,0.1)' },
   };
-}
 
-async function loadBacktest(force = false) {
-  const btn     = document.getElementById('runBtn');
-  const banner  = document.getElementById('statusBanner');
-  const msg     = document.getElementById('statusMsg');
-  const content = document.getElementById('btContent');
-
-  btn.classList.add('running');
-  btn.textContent = force ? '⏳ Re-running…' : '⏳ Loading…';
-  banner.style.display = '';
-  msg.textContent = force
-    ? 'Re-running V3.2 backtest on full IDX universe (10y data, 6 filters). This can take 8–12 minutes…'
-    : 'Loading backtest results…';
-
-  try {
-    const url = force ? '/api/backtest/?force=1' : '/api/backtest/';
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-
-    if (data.error) throw new Error(data.error);
-
-    BT_DATA_RAW = data;  // Store original data
-    banner.style.display = 'none';
-    content.style.display = '';
-
-    updateInputDisplays();
-    recalculateBacktest();  // Recalculate with default inputs
-
-  } catch (err) {
-    msg.style.color = 'var(--red)';
-    msg.textContent = '⚠ ' + err.message;
-  } finally {
-    btn.classList.remove('running');
-    btn.textContent = '▶ Load Results';
+  function gradeBadge(grade) {
+    const c = GRADE_COLORS[grade] || GRADE_COLORS.D;
+    return `<span style="display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px;
+          font-weight:800; background:${c.bg}; color:${c.text}; border:1px solid ${c.border};">${grade}</span>`;
   }
-}
 
-function fmt(n, dec=2) {
-  if (n == null) return '—';
-  return Number(n).toFixed(dec);
-}
-
-function renderMetrics(m) {
-  const wr_color = m.win_rate >= 55 ? 'var(--green)' : m.win_rate >= 45 ? 'var(--yellow)' : 'var(--red)';
-  const pnl_color  = (m.total_pnl_idr || 0)  >= 0  ? 'var(--green)' : 'var(--red)';
-  const pf_color = m.profit_factor >= 1.5 ? 'var(--green)' : m.profit_factor >= 1.0 ? 'var(--yellow)' : 'var(--red)';
-
-  const tp1r = m.tp1_rate != null ? m.tp1_rate : (m.tp1_hits != null ? fmt(m.tp1_hits / m.total_trades * 100, 1) : '—');
-  const tp2r = m.tp2_rate != null ? m.tp2_rate : '—';
-  const tp3r = m.tp3_rate != null ? m.tp3_rate : '—';
-
-  const cards = [
-    { value: m.total_trades,                   label: 'Total Trades',           color: 'var(--accent)', sub: `${m.wins}W / ${m.losses}L · V3 Strategy` },
-    { value: fmt(m.win_rate, 1) + '%',          label: 'Win Rate',               color: wr_color,        sub: `Max streak ${m.max_consec_wins}W / ${m.max_consec_losses}L` },
-    { value: formatIDR(m.total_pnl_idr || 0),   label: 'Total P&L (IDR)',        color: pnl_color,       sub: `Exp: ${formatIDR(m.expectancy_idr || 0)}/trade` },
-    { value: fmt(m.profit_factor),              label: 'Profit Factor',          color: pf_color,        sub: `Avg: ${formatIDR(m.avg_win_idr || 0)} / ${formatIDR(m.avg_loss_idr || 0)}` },
-    { value: fmt(m.avg_hold_days, 1) + ' days', label: 'Avg Hold',               color: 'var(--text)',   sub: `Avg P&L ${fmt(m.avg_pnl_pct, 2)}%` },
-    { value: `${tp1r}% / ${tp2r}% / ${tp3r}%`,  label: 'TP1 / TP2 / TP3 Hit %', color: 'var(--green)',  sub: 'Partial exit hit rates' },
-    { value: m.tickers_with_trades,             label: 'Tickers Traded',         color: 'var(--accent)', sub: `of ${m.tickers_tested} tested` },
+  // Renders 10 signal mini-badges for a trade's confluence_signals dict
+  const SIGNAL_MAP = [
+    ['regime_bull',     'REG', 'Regime Bull or Strong Bull (IHSG ≥50)'],
+    ['ihsg_tight',      'IDX', 'IHSG Tight (≥70 Strong Bull)'],
+    ['bos',             'BOS', 'Break of Structure Confirmed'],
+    ['poi_tight',       'POI', 'POI Band Tight (±3% vs ±5%)'],
+    ['rejection_green', 'REJ', 'Rejection Candle Green (buyers)'],
+    ['weekly_bullish',  'WKL', 'Weekly SMC Bias Bullish'],
+    ['ma50_above',      'M50', 'Price Above MA50 (bonus)'],
+    ['idm',             'IDM', 'Smart Money IDM Detected'],
+    ['volume_high',     'VOL', 'Volume High (>1.5x average)'],
+    ['hold_time',       'HLD', 'Hold Time Optimization (future)'],
   ];
 
-  document.getElementById('metricsGrid').innerHTML = cards.map((c, i) => {
-    const isLast = i === cards.length - 1;
-    const gridColSpan = isLast ? 'grid-column: 2;' : '';
-    return `
+  function signalBadges(cs) {
+    if (!cs) return '<span style="color:var(--muted); font-size:10px;">—</span>';
+    return SIGNAL_MAP.map(([k, label, tip]) =>
+      `<span class="sig-badge ${cs[k] ? 'sig-on' : 'sig-off'}" title="${tip}">${label}</span>`
+    ).join('');
+  }
+
+  // Set active grade filter and re-render
+  // g = null → show ALL grades; g = 'A'/'B'/'C'/'D' → filter to that grade
+  function setGrade(g) {
+    ACTIVE_GRADE = g;
+    // Update pill active states
+    document.querySelectorAll('.grade-pill').forEach(el => el.classList.remove('active'));
+    if (g === null) {
+      const allPill = document.querySelector('.grade-pill.all');
+      if (allPill) allPill.classList.add('active');
+    } else {
+      const map = { A: 'g-a', B: 'g-b', C: 'g-c', D: 'g-d' };
+      const target = document.querySelector(`.grade-pill.${map[g]}`);
+      if (target) target.classList.add('active');
+    }
+    // Re-render everything with the new grade filter
+    recalculateBacktest();
+  }
+
+  // Format IDR currency
+  function formatIDR(n) {
+    if (n == null) return '—';
+    return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  }
+
+  // Update capital & risk display when inputs change
+  function updateInputDisplays() {
+    const capital = parseFloat(document.getElementById('capitalInput').value) || 100000000;
+    const risk_pct = parseFloat(document.getElementById('riskInput').value) || 1.0;
+    const risk_idr = capital * (risk_pct / 100);
+
+    document.getElementById('capitalDisplay').textContent = formatIDR(capital);
+    document.getElementById('riskDisplay').textContent = formatIDR(risk_idr);
+  }
+
+  // Recalculate backtest with new position sizing
+  function recalculateBacktest() {
+    updateInputDisplays();
+
+    if (!BT_DATA_RAW) {
+      alert('Backtest data not loaded. Please load backtest first.');
+      return;
+    }
+
+    const capital = parseFloat(document.getElementById('capitalInput').value) || 100000000;
+    const risk_pct = parseFloat(document.getElementById('riskInput').value) || 1.0;
+
+    // Recalculate position sizes for each trade
+    const capital_idr = capital;
+    const risk_idr = capital_idr * (risk_pct / 100);
+
+    // Copy the raw data and adjust trades with position sizing
+    // V3: partial exits — 1/3 position at TP1, TP2, TP3
+    const allPositionSizedTrades = BT_DATA_RAW.trades.map(trade => {
+      const price_risk = trade.entry_price - trade.sl;
+      const shares = price_risk > 0 ? Math.floor(risk_idr / price_risk) : 0;
+      const shares3 = Math.floor(shares / 3);
+      const shares_last = shares - shares3 * 2;   // handles rounding
+
+      let pnl_idr = 0;
+      if (!trade.tp1_hit) {
+        // No partial exits — full position at exit_price (SL or timeout)
+        pnl_idr = (trade.exit_price - trade.entry_price) * shares;
+      } else if (!trade.tp2_hit) {
+        // TP1 hit; remaining 2/3 at breakeven (entry) or timeout exit
+        pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+          + (trade.exit_price - trade.entry_price) * (shares - shares3);
+      } else if (!trade.tp3_hit) {
+        // TP1 + TP2 hit; final 1/3 at TP1-level SL or timeout
+        pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+          + (trade.tp2 - trade.entry_price) * shares3
+          + (trade.exit_price - trade.entry_price) * shares_last;
+      } else {
+        // All 3 TPs hit
+        pnl_idr = (trade.tp1 - trade.entry_price) * shares3
+          + (trade.tp2 - trade.entry_price) * shares3
+          + (trade.tp3 - trade.entry_price) * shares_last;
+      }
+
+      return {
+        ...trade,
+        shares: shares,
+        shares3: shares3,
+        risk_idr: risk_idr,
+        pnl_idr: pnl_idr,
+        pnl_idr_pct: shares > 0 ? (pnl_idr / (trade.entry_price * shares)) * 100 : 0,
+      };
+    });
+
+    // Apply grade filter — null shows all grades, string filters to that grade
+    const positionSizedTrades = ACTIVE_GRADE
+      ? allPositionSizedTrades.filter(t => t.grade === ACTIVE_GRADE)
+      : allPositionSizedTrades;
+
+    // Rebuild metrics with position-sized values
+    const positionSizedData = recalculateMetrics(BT_DATA_RAW, positionSizedTrades, capital_idr);
+    BT_DATA = positionSizedData;
+
+    // Re-render everything
+    renderMetrics(positionSizedData.metrics);
+    renderCharts(positionSizedData.equity_curve, positionSizedData.dd_curve);
+    renderMonthly(positionSizedData.monthly_pnl);
+    renderTickerStats(positionSizedData.ticker_stats);
+    renderTrades();
+  }
+
+  // Recalculate all metrics based on position-sized trades
+  function recalculateMetrics(origData, positionSizedTrades, capital_idr) {
+    const wins = positionSizedTrades.filter(t => t.outcome === 'WIN');
+    const losses = positionSizedTrades.filter(t => t.outcome === 'LOSS');
+    const total = positionSizedTrades.length;
+
+    // Calculate metrics in IDR
+    const total_pnl_idr = positionSizedTrades.reduce((sum, t) => sum + t.pnl_idr, 0);
+    const win_pnl_idr = wins.reduce((sum, t) => sum + t.pnl_idr, 0);
+    const loss_pnl_idr = losses.reduce((sum, t) => sum + t.pnl_idr, 0);
+
+    const win_rate = total > 0 ? (wins.length / total * 100) : 0;
+    const avg_win_idr = wins.length > 0 ? (win_pnl_idr / wins.length) : 0;
+    const avg_loss_idr = losses.length > 0 ? (loss_pnl_idr / losses.length) : 0;
+    const gross_profit = win_pnl_idr;
+    const gross_loss = Math.abs(loss_pnl_idr);
+    const profit_factor = gross_loss > 0 ? (gross_profit / gross_loss) : 0;
+    const expectancy_idr = total > 0 ? (total_pnl_idr / total) : 0;
+    const avg_hold = total > 0 ? (positionSizedTrades.reduce((sum, t) => sum + t.hold_days, 0) / total) : 0;
+    const avg_pnl_pct = total > 0 ? (positionSizedTrades.reduce((sum, t) => sum + t.pnl_idr_pct, 0) / total) : 0;
+
+    // Equity curve in IDR
+    let equity = 0;
+    const eq_curve_idr = [];
+    for (const t of positionSizedTrades) {
+      equity += t.pnl_idr;
+      eq_curve_idr.push(Math.round(equity));
+    }
+
+    // Drawdown in IDR
+    let peak = 0;
+    const dd_curve_idr = [];
+    for (const eq of eq_curve_idr) {
+      peak = Math.max(peak, eq);
+      dd_curve_idr.push(peak - eq);
+    }
+    const max_dd_idr = Math.max(...dd_curve_idr, 0);
+
+    // Consecutive streaks
+    let max_consec_wins = 0, max_consec_losses = 0, cur_w = 0, cur_l = 0;
+    for (const tr of positionSizedTrades) {
+      if (tr.outcome === 'WIN') {
+        cur_w += 1; cur_l = 0;
+      } else {
+        cur_l += 1; cur_w = 0;
+      }
+      max_consec_wins = Math.max(max_consec_wins, cur_w);
+      max_consec_losses = Math.max(max_consec_losses, cur_l);
+    }
+
+    // Monthly P&L in IDR
+    const monthly = {};
+    for (const tr of positionSizedTrades) {
+      const month = tr.entry_date.substring(0, 7);
+      monthly[month] = Math.round((monthly[month] || 0) + tr.pnl_idr);
+    }
+
+    // Per-ticker breakdown
+    const ticker_stats = {};
+    for (const tr of positionSizedTrades) {
+      const ts = ticker_stats[tr.ticker] || { wins: 0, losses: 0, total_pnl_idr: 0, trades: 0 };
+      ts.trades += 1;
+      ts.total_pnl_idr = Math.round(ts.total_pnl_idr + tr.pnl_idr);
+      if (tr.outcome === 'WIN') {
+        ts.wins += 1;
+      } else {
+        ts.losses += 1;
+      }
+      ticker_stats[tr.ticker] = ts;
+    }
+
+    const longest_win = Math.max(...(wins.map(t => t.hold_days) || [0]), 0);
+    const longest_loss = Math.max(...(losses.map(t => t.hold_days) || [0]), 0);
+    const best_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr > b.pnl_idr ? a : b) : null;
+    const worst_trade = positionSizedTrades.length > 0 ? positionSizedTrades.reduce((a, b) => a.pnl_idr < b.pnl_idr ? a : b) : null;
+
+    // TP hit rates (from raw R-based fields on filtered trade subset)
+    const tp1_hits = positionSizedTrades.filter(t => t.tp1_hit).length;
+    const tp2_hits = positionSizedTrades.filter(t => t.tp2_hit).length;
+    const tp3_hits = positionSizedTrades.filter(t => t.tp3_hit).length;
+
+    return {
+      trades: positionSizedTrades,
+      equity_curve: eq_curve_idr,
+      dd_curve: dd_curve_idr,
+      metrics: {
+        total_trades: total,
+        wins: wins.length,
+        losses: losses.length,
+        win_rate: Math.round(win_rate * 10) / 10,
+        total_pnl_idr: Math.round(total_pnl_idr),
+        avg_win_idr: Math.round(avg_win_idr),
+        avg_loss_idr: Math.round(avg_loss_idr),
+        profit_factor: Math.round(profit_factor * 100) / 100,
+        max_drawdown_idr: Math.round(max_dd_idr),
+        expectancy_idr: Math.round(expectancy_idr),
+        avg_hold_days: Math.round(avg_hold * 10) / 10,
+        avg_pnl_pct: Math.round(avg_pnl_pct * 10) / 10,
+        max_consec_wins: max_consec_wins,
+        max_consec_losses: max_consec_losses,
+        tickers_tested: origData.metrics.tickers_tested,
+        tickers_with_trades: Object.keys(ticker_stats).length,
+        tickers_skipped: origData.metrics.tickers_skipped,
+        best_trade: best_trade,
+        worst_trade: worst_trade,
+        longest_win_days: longest_win,
+        longest_loss_days: longest_loss,
+        ihsg_filtered_signals: origData.metrics.ihsg_filtered_signals,
+        ihsg_filter_active: origData.metrics.ihsg_filter_active,
+        tp1_hits: tp1_hits,
+        tp2_hits: tp2_hits,
+        tp3_hits: tp3_hits,
+        tp1_rate: total > 0 ? Math.round(tp1_hits / total * 1000) / 10 : 0,
+        tp2_rate: total > 0 ? Math.round(tp2_hits / total * 1000) / 10 : 0,
+        tp3_rate: total > 0 ? Math.round(tp3_hits / total * 1000) / 10 : 0,
+      },
+      ticker_stats: ticker_stats,
+      monthly_pnl: monthly,
+      params: origData.params,
+    };
+  }
+
+  async function loadBacktest(force = false) {
+    const btn = document.getElementById('runBtn');
+    const banner = document.getElementById('statusBanner');
+    const msg = document.getElementById('statusMsg');
+    const content = document.getElementById('btContent');
+
+    btn.classList.add('running');
+    btn.textContent = force ? '⏳ Re-running…' : '⏳ Loading…';
+    banner.style.display = '';
+    msg.textContent = force
+      ? 'Re-running V3.2 backtest on full IDX universe (10y data, 6 filters). This can take 8–12 minutes…'
+      : 'Loading backtest results…';
+
+    try {
+      const url = force ? '/api/backtest/?force=1' : '/api/backtest/';
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (data.error) throw new Error(data.error);
+
+      BT_DATA_RAW = data;  // Store original data
+      banner.style.display = 'none';
+      content.style.display = '';
+
+      updateInputDisplays();
+      recalculateBacktest();  // Recalculate with default inputs
+
+    } catch (err) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = '⚠ ' + err.message;
+    } finally {
+      btn.classList.remove('running');
+      btn.textContent = '▶ Load Results';
+    }
+  }
+
+  function fmt(n, dec = 2) {
+    if (n == null) return '—';
+    return Number(n).toFixed(dec);
+  }
+
+  function renderMetrics(m) {
+    const wr_color = m.win_rate >= 55 ? 'var(--green)' : m.win_rate >= 45 ? 'var(--yellow)' : 'var(--red)';
+    const pnl_color = (m.total_pnl_idr || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+    const pf_color = m.profit_factor >= 1.5 ? 'var(--green)' : m.profit_factor >= 1.0 ? 'var(--yellow)' : 'var(--red)';
+
+    const tp1r = m.tp1_rate != null ? m.tp1_rate : (m.tp1_hits != null ? fmt(m.tp1_hits / m.total_trades * 100, 1) : '—');
+    const tp2r = m.tp2_rate != null ? m.tp2_rate : '—';
+    const tp3r = m.tp3_rate != null ? m.tp3_rate : '—';
+
+    const cards = [
+      { value: m.total_trades, label: 'Total Trades', color: 'var(--accent)', sub: `${m.wins}W / ${m.losses}L · V3 Strategy` },
+      { value: fmt(m.win_rate, 1) + '%', label: 'Win Rate', color: wr_color, sub: `Max streak ${m.max_consec_wins}W / ${m.max_consec_losses}L` },
+      { value: formatIDR(m.total_pnl_idr || 0), label: 'Total P&L (IDR)', color: pnl_color, sub: `Exp: ${formatIDR(m.expectancy_idr || 0)}/trade` },
+      { value: fmt(m.profit_factor), label: 'Profit Factor', color: pf_color, sub: `Avg: ${formatIDR(m.avg_win_idr || 0)} / ${formatIDR(m.avg_loss_idr || 0)}` },
+      { value: fmt(m.avg_hold_days, 1) + ' days', label: 'Avg Hold', color: 'var(--text)', sub: `Avg P&L ${fmt(m.avg_pnl_pct, 2)}%` },
+      { value: `${tp1r}% / ${tp2r}% / ${tp3r}%`, label: 'TP1 / TP2 / TP3 Hit %', color: 'var(--green)', sub: 'Partial exit hit rates' },
+      { value: m.tickers_with_trades, label: 'Tickers Traded', color: 'var(--accent)', sub: `of ${m.tickers_tested} tested` },
+    ];
+
+    document.getElementById('metricsGrid').innerHTML = cards.map((c, i) => {
+      const isLast = i === cards.length - 1;
+      const gridColSpan = isLast ? 'grid-column: 2;' : '';
+      return `
     <div class="metric-card" style="${gridColSpan}">
       <div class="m-value" style="color:${c.color};">${c.value}</div>
       <div class="m-label">${c.label}</div>
       <div class="m-sub">${c.sub}</div>
     </div>`;
-  }).join('');
-}
+    }).join('');
+  }
 
-let equityChartInst = null;
+  let equityChartInst = null;
 
-function renderCharts(eqCurve, ddCurve) {
-  const labels = eqCurve.map((_, i) => `T${i + 1}`);
-  const accentRGB = '255, 99, 219';
+  function renderCharts(eqCurve, ddCurve) {
+    const labels = eqCurve.map((_, i) => `T${i + 1}`);
+    const accentRGB = '255, 99, 219';
 
-  if (equityChartInst) equityChartInst.destroy();
+    if (equityChartInst) equityChartInst.destroy();
 
-  const commonOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { display: false },
-      y: {
-        grid:  { color: 'rgba(255,99,219,0.08)' },
-        ticks: {
-          color: '#a68498',
-          font: { size: 11 },
-          callback: function(value) {
-            return (value / 1000000).toFixed(0) + 'M';
-          }
+    const commonOpts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: 'rgba(255,99,219,0.08)' },
+          ticks: {
+            color: '#a68498',
+            font: { size: 11 },
+            callback: function (value) {
+              return (value / 1000000).toFixed(0) + 'M';
+            }
+          },
         },
       },
-    },
-    elements: { point: { radius: 0 } },
-  };
+      elements: { point: { radius: 0 } },
+    };
 
-  equityChartInst = new Chart(document.getElementById('equityChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data: eqCurve,
-        borderColor: `rgba(${accentRGB}, 0.9)`,
-        backgroundColor: `rgba(${accentRGB}, 0.08)`,
-        borderWidth: 1.5,
-        fill: true,
-        tension: 0.3,
-      }],
-    },
-    options: commonOpts,
-  });
-}
+    equityChartInst = new Chart(document.getElementById('equityChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: eqCurve,
+          borderColor: `rgba(${accentRGB}, 0.9)`,
+          backgroundColor: `rgba(${accentRGB}, 0.08)`,
+          borderWidth: 1.5,
+          fill: true,
+          tension: 0.3,
+        }],
+      },
+      options: commonOpts,
+    });
+  }
 
-function renderMonthly(monthly) {
-  const entries = Object.entries(monthly).sort((a, b) => a[0].localeCompare(b[0]));
-  const max = Math.max(...entries.map(e => Math.abs(e[1])), 1);
+  function renderMonthly(monthly) {
+    const entries = Object.entries(monthly).sort((a, b) => a[0].localeCompare(b[0]));
+    const max = Math.max(...entries.map(e => Math.abs(e[1])), 1);
 
-  document.getElementById('monthGrid').innerHTML = entries.map(([month, pnl_idr]) => {
-    const intensity = Math.min(Math.abs(pnl_idr) / max, 1);
-    const isPos = pnl_idr >= 0;
-    const bg = isPos
-      ? `rgba(0, 230, 118, ${0.08 + intensity * 0.35})`
-      : `rgba(255, 77, 109, ${0.08 + intensity * 0.35})`;
-    const color = isPos ? 'var(--green)' : 'var(--red)';
-    return `
+    document.getElementById('monthGrid').innerHTML = entries.map(([month, pnl_idr]) => {
+      const intensity = Math.min(Math.abs(pnl_idr) / max, 1);
+      const isPos = pnl_idr >= 0;
+      const bg = isPos
+        ? `rgba(0, 230, 118, ${0.08 + intensity * 0.35})`
+        : `rgba(255, 77, 109, ${0.08 + intensity * 0.35})`;
+      const color = isPos ? 'var(--green)' : 'var(--red)';
+      return `
       <div class="month-cell" style="background:${bg}; color:${color}; border:1px solid ${isPos ? 'rgba(0,230,118,0.2)' : 'rgba(255,77,109,0.2)'};">
         <div style="color:var(--muted); font-size:10px; font-weight:400;">${month}</div>
         <div style="font-size:11px;">${pnl_idr > 0 ? '+' : ''}${(pnl_idr / 1000000).toFixed(1)}M</div>
       </div>`;
-  }).join('');
-}
+    }).join('');
+  }
 
-function renderTickerStats(stats) {
-  const sorted = Object.entries(stats)
-    .sort((a, b) => (b[1].total_pnl_idr || 0) - (a[1].total_pnl_idr || 0));
+  function renderTickerStats(stats) {
+    const sorted = Object.entries(stats)
+      .sort((a, b) => (b[1].total_pnl_idr || 0) - (a[1].total_pnl_idr || 0));
 
-  document.getElementById('tickerBody').innerHTML = sorted.map(([ticker, s]) => {
-    const wr = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(0) : 0;
-    const pnlColor = (s.total_pnl_idr || 0) >= 0 ? 'var(--green)' : 'var(--red)';
-    return `
+    document.getElementById('tickerBody').innerHTML = sorted.map(([ticker, s]) => {
+      const wr = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(0) : 0;
+      const pnlColor = (s.total_pnl_idr || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      return `
       <tr>
         <td><a href="/stock/${ticker}/">${ticker}</a></td>
         <td style="text-align:right;">${s.trades}</td>
@@ -660,83 +919,100 @@ function renderTickerStats(stats) {
         <td style="text-align:right;">${wr}%</td>
         <td style="text-align:right; font-weight:600; color:${pnlColor};">${formatIDR(s.total_pnl_idr || 0)}</td>
       </tr>`;
-  }).join('');
-}
+    }).join('');
+  }
 
-function renderTrades() {
-  if (!BT_DATA) return;
-  const filter = document.getElementById('tradeFilter').value;
-  let trades = BT_DATA.trades;
-  if (filter) trades = trades.filter(t => t.outcome === filter);
+  function renderTrades() {
+    if (!BT_DATA) return;
+    const filter = document.getElementById('tradeFilter').value;
+    let trades = BT_DATA.trades;
+    if (filter) trades = trades.filter(t => t.outcome === filter);
 
-  const lbl = document.getElementById('activeGradeLabel');
-  if (lbl) lbl.textContent = ACTIVE_GRADE;
+    document.getElementById('tradeCount').textContent = `${trades.length} trade${trades.length !== 1 ? 's' : ''}`;
 
-  document.getElementById('tradeCount').textContent = `${trades.length} trades`;
+    // Regime label with color
+    const regimeColor = {
+      'Bull Quiet':    '#00e676',
+      'Bull Volatile': '#ffd700',
+      'Ranging':       '#63b3ff',
+    };
 
-  document.getElementById('tradeBody').innerHTML = trades.map(t => {
-    const isWin  = t.outcome === 'WIN';
-    const pnlColor = (t.pnl_idr || 0) >= 0 ? 'var(--green)' : 'var(--red)';
-    const badge  = isWin
-      ? '<span class="badge badge-green">WIN</span>'
-      : '<span class="badge badge-red">LOSS</span>';
-    const flags  = (t.flags || []).map(f =>
-      `<span class="badge badge-blue" style="margin-right:2px;">${f}</span>`
-    ).join('');
-    const tp1Cell = t.tp1_hit
-      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp1||0).toLocaleString()}</span>`
-      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
-    const tp2Cell = t.tp2_hit
-      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp2||0).toLocaleString()}</span>`
-      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
-    const tp3Cell = t.tp3_hit
-      ? `<span style="color:var(--green); font-weight:700;">✅</span><br><span style="font-size:10px; color:var(--muted);">Rp ${(t.tp3||0).toLocaleString()}</span>`
-      : `<span style="color:var(--muted); font-size:13px;">—</span>`;
+    document.getElementById('tradeBody').innerHTML = trades.map(t => {
+      const isWin = t.outcome === 'WIN';
+      const pnlColor = (t.pnl_idr || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const pnlRColor = (t.pnl_r || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const badge = isWin
+        ? '<span class="badge badge-green">WIN</span>'
+        : '<span class="badge badge-red">LOSS</span>';
+      const tp1Cell = t.tp1_hit
+        ? `<span style="color:var(--green);">✅</span><br><span style="font-size:10px; color:var(--muted);">${(t.tp1 || 0).toLocaleString()}</span>`
+        : `<span style="color:var(--muted);">—</span>`;
+      const tp2Cell = t.tp2_hit
+        ? `<span style="color:var(--green);">✅</span><br><span style="font-size:10px; color:var(--muted);">${(t.tp2 || 0).toLocaleString()}</span>`
+        : `<span style="color:var(--muted);">—</span>`;
+      const tp3Cell = t.tp3_hit
+        ? `<span style="color:var(--green);">✅</span><br><span style="font-size:10px; color:var(--muted);">${(t.tp3 || 0).toLocaleString()}</span>`
+        : `<span style="color:var(--muted);">—</span>`;
+      const regimeStr = t.regime_state || '—';
+      const regClr = regimeColor[regimeStr] || 'var(--muted)';
+      const confStr = t.confluence_score != null ? (t.confluence_score * 10).toFixed(0) + '/10' : '—';
+      const posStr  = t.position_size_pct != null ? t.position_size_pct + '%' : '—';
+      const feeStr  = t.fee_r != null ? `<span style="color:var(--red); font-size:11px;">−${fmt(Math.abs(t.fee_r), 3)}R</span>` : '—';
+      const pnlRStr = t.pnl_r != null
+        ? `<span style="font-weight:600; color:${pnlRColor};">${t.pnl_r >= 0 ? '+' : ''}${fmt(t.pnl_r, 3)}R</span>`
+        : '—';
 
-    return `
+      return `
       <tr>
         <td><a href="/stock/${t.ticker}/">${t.ticker}</a></td>
         <td>${gradeBadge(t.grade || 'D')}</td>
-        <td>${t.entry_date}</td>
-        <td>${t.exit_date}</td>
-        <td style="text-align:right;">${t.shares ? t.shares.toLocaleString() + ' sh' : '—'}</td>
-        <td style="text-align:right;">Rp ${(t.entry_price||0).toLocaleString()}</td>
-        <td style="text-align:right; color:var(--red);">Rp ${(t.sl||0).toLocaleString()}</td>
-        <td style="text-align:center;">${tp1Cell}</td>
-        <td style="text-align:center;">${tp2Cell}</td>
-        <td style="text-align:center;">${tp3Cell}</td>
-        <td style="text-align:right;">Rp ${(t.exit_price||0).toLocaleString()}</td>
+        <td style="font-size:11px; color:${regClr}; white-space:nowrap;">${regimeStr}</td>
+        <td style="white-space:nowrap;">${signalBadges(t.confluence_signals)}</td>
+        <td style="text-align:right; font-size:11px;">${confStr}</td>
+        <td style="text-align:right; font-size:11px; color:var(--muted);">${posStr}</td>
+        <td style="font-size:11px;">${t.entry_date}</td>
+        <td style="font-size:11px;">${t.exit_date}</td>
+        <td style="text-align:right; font-size:11px;">${t.shares ? t.shares.toLocaleString() : '—'}</td>
+        <td style="text-align:right;">Rp ${(t.entry_price || 0).toLocaleString()}</td>
+        <td style="text-align:right; color:var(--red);">Rp ${(t.sl || 0).toLocaleString()}</td>
+        <td style="text-align:center; font-size:11px;">${tp1Cell}</td>
+        <td style="text-align:center; font-size:11px;">${tp2Cell}</td>
+        <td style="text-align:center; font-size:11px;">${tp3Cell}</td>
+        <td style="text-align:right;">Rp ${(t.exit_price || 0).toLocaleString()}</td>
+        <td style="text-align:right;">${feeStr}</td>
+        <td style="text-align:right;">${pnlRStr}</td>
         <td style="text-align:right; font-weight:600; color:${pnlColor};">${formatIDR(t.pnl_idr || 0)}</td>
-        <td style="text-align:right;">${t.hold_days}d</td>
+        <td style="text-align:right; font-size:11px;">${t.hold_days}d</td>
         <td>${badge}</td>
       </tr>`;
-  }).join('');
-}
+    }).join('');
+  }
 
-function renderParams(p) {
-  const tpStr = p.tp1_r != null
-    ? `${p.tp1_r}R / ${p.tp2_r}R / ${p.tp3_r}R (partial 1/3 each)`
-    : (p.tp_r ? p.tp_r + 'R' : '—');
-  const items = [
-    ['TP Levels',    tpStr],
-    ['SL Factor',    (p.sl_factor * 100).toFixed(1) + '% below POI'],
-    ['Max Hold',     (p.max_hold || 40) + ' bars'],
-    ['Window',       p.window + ' bars'],
-    ['Step',         p.step + ' bars'],
-    ['POI Band',     '±' + (p.poi_band * 100).toFixed(0) + '%'],
-    ['Weekly Window', (p.weekly_window || 8) + ' weeks'],
-    ['Universe',     p.universe + ' stocks'],
-    ['Period',       p.period || '4y'],
-    ['Entry Filters', p.entry_filters || '8 hard filters'],
-    ['IHSG Filter',  p.ihsg_filter || 'score ≥ 50'],
-    ['Version',      p.version || 'v3'],
-  ];
-  document.getElementById('paramList').innerHTML = items.map(([k, v]) =>
-    `<span class="param-badge">${k}: <strong>${v}</strong></span>`
-  ).join('');
-}
+  function renderParams(p) {
+    const tpStr = p.tp1_r != null
+      ? `${p.tp1_r}R / ${p.tp2_r}R / ${p.tp3_r}R (partial 1/3 each)`
+      : (p.tp_r ? p.tp_r + 'R' : '—');
+    const items = [
+      ['TP Levels', tpStr],
+      ['SL Factor', (p.sl_factor * 100).toFixed(1) + '% below POI'],
+      ['Max Hold', (p.max_hold || 40) + ' bars'],
+      ['Window', p.window + ' bars'],
+      ['Step', p.step + ' bars'],
+      ['POI Band', '±' + (p.poi_band * 100).toFixed(0) + '%'],
+      ['Weekly Window', (p.weekly_window || 8) + ' weeks'],
+      ['Universe', p.universe + ' stocks'],
+      ['Period', p.period || '4y'],
+      ['Entry Filters', p.entry_filters || '8 hard filters'],
+      ['IHSG Filter', p.ihsg_filter || 'score ≥ 50'],
+      ['Fees', p.fee_note || '—'],
+      ['Version', p.version || 'v3'],
+    ];
+    document.getElementById('paramList').innerHTML = items.map(([k, v]) =>
+      `<span class="param-badge">${k}: <strong>${v}</strong></span>`
+    ).join('');
+  }
 
-// Auto-load on page ready
-document.addEventListener('DOMContentLoaded', () => loadBacktest(false));
+  // Auto-load on page ready
+  document.addEventListener('DOMContentLoaded', () => loadBacktest(false));
 </script>
 {% endblock %}

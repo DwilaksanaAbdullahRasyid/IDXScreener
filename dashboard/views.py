@@ -82,7 +82,16 @@ def index(request):
 
 def screener(request):
     """Screener page — IDX signal filter + full universe watchlist."""
-    screener_data = analysis.screen_market()
+    try:
+        screener_data = analysis.screen_market()
+    except Exception as e:
+        import traceback
+        log.error(f"Screener failed: {str(e)}\n{traceback.format_exc()}")
+        screener_data = {
+            "confirmed": [], "watch": [], "caution": [], "watchlist": [],
+            "api_calls_remaining": 28, "api_calls_today": 0,
+            "error": f"Screener load failed: {str(e)[:200]}"
+        }
 
     confirmed = screener_data.get("confirmed", [])
     watch     = screener_data.get("watch",     [])
@@ -90,6 +99,8 @@ def screener(request):
     watchlist = screener_data.get("watchlist", [])
 
     context = {
+        # Error handling
+        "error": screener_data.get("error"),
         # Signal buckets
         "confirmed":  confirmed,
         "watch":      watch,

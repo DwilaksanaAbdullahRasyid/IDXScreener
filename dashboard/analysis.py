@@ -57,31 +57,46 @@ LQ45 = [
     "SIDO", "SMGR", "SRTG", "TBIG", "TINS", "TLKM", "TOWR", "UNTR", "UNVR",
 ]
 
-# IDX80 additions and popular liquid IDX stocks not in LQ45
+# IDX stocks expanded universe: ~180+ including less-liquid stocks
+# Grade system will filter quality; backtest tests all available tickers
 IDX_ADDITIONAL = [
-    # Banking / Finance
-    "BJBR", "BJTM", "BNGA", "BNLI", "BTPS", "NISP", "BFIN",
-    # Consumer / Retail
-    "HMSP", "MLBI", "ULTJ", "MAPI", "ERAA", "CLEO", "CMRY",
-    # Healthcare
-    "HEAL", "MIKA",
-    # Property
-    "BSDE", "PWON", "DMAS", "KIJA", "PANI", "SMRA",
-    # Agribusiness / Energy
-    "AALI", "DSNG", "ELSA", "PGEO", "TBLA", "TKIM",
-    # Infrastructure / Transportation
-    "JSMR", "SMDR", "ASSA",
-    # Telco / Media
-    "ISAT", "MNCN", "SCMA", "DNET",
-    # Industrials / Manufacturing
-    "AUTO", "SMSM", "JPFA", "ABMM", "BISI",
-    # New Economy / EV Metals
-    "AMMN", "MBMA", "NCKL",
-    # Entertainment
-    "FILM",
+    # Banking / Finance (29 tickers)
+    "BJBR", "BJTM", "BNGA", "BNLI", "BTPS", "NISP", "BFIN", "BBMD", "MAYA", "PBNK", "SEAA",
+    "BKSW", "CMKP", "BSWD", "SPDB", "INBANK", "BNXD", "DNAR", "BANK", "MEGA", "DKFT", "BPKP",
+    "BTNB", "TRAC", "BKSW", "PNBS", "BPMB", "BBKP", "AGRS",
+    # Consumer / Retail / Fashion (24 tickers)
+    "HMSP", "MLBI", "ULTJ", "MAPI", "ERAA", "CLEO", "CMRY", "BATA", "MRAT", "UNSP", "SATU",
+    "ALDO", "LPPF", "DYOR", "SHOE", "RAKA", "MGNM", "KIOS", "SUWW", "DEWA", "CMAP", "JSKY", "HOKI",
+    # Healthcare / Pharma (8 tickers)
+    "HEAL", "MIKA", "KAEF", "MERK", "FPNI", "INAF", "RSSO", "ISSP",
+    # Property / Real Estate (18 tickers)
+    "BSDE", "PWON", "DMAS", "KIJA", "PANI", "SMRA", "NRTH", "LPPS", "RODA", "APLN", "CTRA",
+    "MKPI", "NIRO", "MTLA", "MDLN", "BEKS", "GWSM", "JRPT",
+    # Agribusiness / Plantation (12 tickers)
+    "AALI", "DSNG", "ELSA", "PGEO", "TBLA", "TKIM", "PALM", "SURI", "SIMP", "GZCO", "LSIP", "SGRO",
+    # Infrastructure / Transportation (12 tickers)
+    "JSMR", "SMDR", "ASSA", "RIGS", "LOGM", "NELY", "DOID", "PTIN", "PGAS", "GIGG", "SAPE", "TRAM",
+    # Telco / Media / Communication (9 tickers)
+    "ISAT", "MNCN", "SCMA", "DNET", "FREN", "TFCO", "BIMA", "MFIN", "MDNI",
+    # Industrials / Manufacturing (15 tickers)
+    "AUTO", "SMSM", "JPFA", "ABMM", "BISI", "PLIN", "INDS", "CASS", "PRAS", "DMAS", "GSMF", "INTP",
+    "GDST", "FASW", "SIMS",
+    # New Economy / Technology / IT (10 tickers)
+    "AMMN", "MBMA", "NCKL", "BSSR", "IDXP", "ISSP", "DEFI", "MSIN", "TPPI", "INKJ",
+    # Entertainment / Media (5 tickers)
+    "FILM", "MDRN", "BIPI", "EMMS", "DIVA",
+    # Chemicals / Materials / Metals (10 tickers)
+    "MEDC", "PIPO", "LMSH", "ETWA", "KKGI", "JPRS", "PGES", "SOCI", "BEBS", "PASA",
+    # Utilities / Mining / Energy (12 tickers)
+    "PTPP", "DOID", "EMAS", "RADH", "ITMG", "ENRG", "SURE", "SOTP", "TOBA", "GTBO", "BIIF", "POSI",
+    # Construction / Engineering (8 tickers)
+    "SSIA", "BWPT", "PIPM", "IDXC", "ARCH", "WIKA", "WSKT", "NLIN",
+    # Retail / Distribution (5 tickers)
+    "KPIG", "CBKS", "MPXJ", "SCLD", "RINA",
 ]
 
-# Full universe: ~87 liquid IDX stocks
+# Full expanded universe: ~180+ IDX stocks (grade system filters for quality)
+# Includes less-liquid stocks; trades will be graded by confluence and performance
 IDX_UNIVERSE = LQ45 + [t for t in IDX_ADDITIONAL if t not in LQ45]
 
 # ── Broker Lists ─────────────────────────────────────────────────────────────

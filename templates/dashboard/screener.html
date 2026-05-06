@@ -10,12 +10,14 @@
     gap: 12px;
     margin: 28px 0 12px;
   }
+
   .section-label h2 {
     font-size: 15px;
     font-weight: 700;
     color: var(--text);
     margin: 0;
   }
+
   .section-label .count-pill {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -24,6 +26,7 @@
     font-size: 12px;
     color: var(--muted);
   }
+
   .section-label .desc {
     font-size: 12px;
     color: var(--muted);
@@ -31,17 +34,44 @@
   }
 
   /* Compact table for watchlist */
-  .wl-table td { padding: 6px 10px; font-size: 12px; }
-  .wl-table th { font-size: 10px; padding: 5px 10px; }
+  .wl-table td {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .wl-table th {
+    font-size: 10px;
+    padding: 5px 10px;
+  }
 
   /* Signal table */
-  .sig-table td { padding: 9px 11px; font-size: 12px; }
-  .sig-table th { font-size: 10px; padding: 6px 11px; }
+  .sig-table td {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .sig-table th {
+    font-size: 10px;
+    padding: 6px 11px;
+  }
 
   /* SMC bias pill */
-  .bias-bull { color: var(--green); font-weight: 600; font-size: 11px; }
-  .bias-bear { color: var(--red);   font-weight: 600; font-size: 11px; }
-  .bias-neu  { color: var(--muted); font-size: 11px; }
+  .bias-bull {
+    color: var(--green);
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .bias-bear {
+    color: var(--red);
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .bias-neu {
+    color: var(--muted);
+    font-size: 11px;
+  }
 
   /* Volume bar */
   .vol-bar-bg {
@@ -54,6 +84,7 @@
     margin-right: 4px;
     overflow: hidden;
   }
+
   .vol-bar-fill {
     height: 100%;
     border-radius: 3px;
@@ -70,12 +101,21 @@
     padding: 6px 12px;
     font-size: 12px;
   }
-  #wlSearch:focus { outline: none; border-color: var(--accent); }
+
+  #wlSearch:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
 
   /* Sticky watchlist header */
-  .wl-scroll { max-height: 520px; overflow-y: auto; }
+  .wl-scroll {
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
   .wl-scroll thead th {
-    position: sticky; top: 0;
+    position: sticky;
+    top: 0;
     background: var(--surface);
     z-index: 1;
   }
@@ -89,7 +129,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+<div class="page-header"
+  style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
   <div>
     <h1>Stock Screener</h1>
     <p>IDX Universe (~87 stocks) · SMC structure + Smart Money flow + v2 enhancements</p>
@@ -100,9 +141,15 @@
   </div>
 </div>
 
+{% if error %}
+<div style="background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.3); border-radius: 4px; padding: 12px 16px; margin: 16px 0; color: #dc3545;">
+  <strong>⚠ Screener Error:</strong> {{ error }}
+</div>
+{% endif %}
+
 {# ═══════════════════════════════════════════════════════════════════════ #}
-{# SECTION 1 — CONFIRMED SIGNALS                                          #}
-{# Passed: 4H Bullish SMC + Trend/POI + Eligible broker flow             #}
+{# SECTION 1 — CONFIRMED SIGNALS #}
+{# Passed: 4H Bullish SMC + Trend/POI + Eligible broker flow #}
 {# ═══════════════════════════════════════════════════════════════════════ #}
 <div class="section-label">
   <span style="font-size:18px;">🚀</span>
@@ -112,96 +159,97 @@
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">
-{% if confirmed %}
-<div style="overflow-x:auto;">
-<table class="sig-table">
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Score</th>
-      <th>Price</th>
-      <th>4H SMC</th>
-      <th>Weekly</th>
-      <th>RS vs IHSG</th>
-      <th>Entry</th>
-      <th>ATR SL</th>
-      <th>ATR TP</th>
-      <th>Flow Signal</th>
-      <th>Flow Quality</th>
-      <th>Flags</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for c in confirmed %}
-    <tr>
-      <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
-      <td>
-        <strong>{{ c.score }}</strong>
-        {% if c.composite.grade %}
-          <span class="badge badge-blue" style="font-size:10px; margin-left:3px;">{{ c.composite.grade }}</span>
-        {% endif %}
-      </td>
-      <td>Rp {{ c.price|floatformat:0 }}</td>
-      <td><span class="badge badge-green">Bullish</span></td>
-      <td>
-        {% if c.weekly.aligned %}
-          <span style="color:var(--green); font-size:11px; font-weight:600;">✓ Aligned</span>
-        {% else %}
-          <span style="color:var(--muted); font-size:11px;">✗ {{ c.weekly.bias|default:"—" }}</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if c.rs %}
-          <span style="font-size:11px; font-weight:600; color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
-            {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
-          </span>
-        {% else %}—{% endif %}
-      </td>
-      <td style="font-size:11px;">
-        {% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else %}—{% endif %}
-      </td>
-      <td style="font-size:11px; color:var(--red);">
-        {% if c.atr_levels.sl %}Rp {{ c.atr_levels.sl|floatformat:0 }}
-          <div style="font-size:10px; color:var(--muted);">{{ c.atr_levels.sl_pct|floatformat:1 }}% risk</div>
-        {% else %}—{% endif %}
-      </td>
-      <td style="font-size:11px; color:var(--green);">
-        {% if c.atr_levels.tp %}Rp {{ c.atr_levels.tp|floatformat:0 }}
-          <div style="font-size:10px; color:var(--muted);">{{ c.atr_levels.rr }}R</div>
-        {% else %}—{% endif %}
-      </td>
-      <td style="font-size:11px; max-width:200px; color:var(--muted);">
-        {{ c.flow.signal|default:"—"|truncatechars:55 }}
-      </td>
-      <td>
-        <span style="font-size:11px; font-weight:600;
+  {% if confirmed %}
+  <div style="overflow-x:auto;">
+    <table class="sig-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Score</th>
+          <th>Price</th>
+          <th>4H SMC</th>
+          <th>Weekly</th>
+          <th>RS vs IHSG</th>
+          <th>Entry</th>
+          <th>ATR SL</th>
+          <th>ATR TP</th>
+          <th>Flow Signal</th>
+          <th>Flow Quality</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in confirmed %}
+        <tr>
+          <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
+          <td>
+            <strong>{{ c.score }}</strong>
+            {% if c.composite.grade %}
+            <span class="badge badge-blue" style="font-size:10px; margin-left:3px;">{{ c.composite.grade }}</span>
+            {% endif %}
+          </td>
+          <td>Rp {{ c.price|floatformat:0 }}</td>
+          <td><span class="badge badge-green">Bullish</span></td>
+          <td>
+            {% if c.weekly.aligned %}
+            <span style="color:var(--green); font-size:11px; font-weight:600;">✓ Aligned</span>
+            {% else %}
+            <span style="color:var(--muted); font-size:11px;">✗ {{ c.weekly.bias|default:"—" }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.rs %}
+            <span
+              style="font-size:11px; font-weight:600; color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
+              {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px;">
+            {% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px; color:var(--red);">
+            {% if c.atr_levels.sl %}Rp {{ c.atr_levels.sl|floatformat:0 }}
+            <div style="font-size:10px; color:var(--muted);">{{ c.atr_levels.sl_pct|floatformat:1 }}% risk</div>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px; color:var(--green);">
+            {% if c.atr_levels.tp %}Rp {{ c.atr_levels.tp|floatformat:0 }}
+            <div style="font-size:10px; color:var(--muted);">{{ c.atr_levels.rr }}R</div>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px; max-width:200px; color:var(--muted);">
+            {{ c.flow.signal|default:"—"|truncatechars:55 }}
+          </td>
+          <td>
+            <span style="font-size:11px; font-weight:600;
           color:{% if c.flow_quality.quality_score >= 75 %}var(--green)
                 {% elif c.flow_quality.quality_score >= 40 %}var(--yellow)
                 {% else %}var(--red){% endif %};">
-          {{ c.flow_quality.quality_score }}/100
-        </span>
-        <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:20 }}</div>
-      </td>
-      <td>
-        {% for f in c.flags %}
-          <span class="badge badge-blue" style="margin-right:2px; margin-bottom:2px;">{{ f }}</span>
+              {{ c.flow_quality.quality_score }}/100
+            </span>
+            <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:20 }}</div>
+          </td>
+          <td>
+            {% for f in c.flags %}
+            <span class="badge badge-blue" style="margin-right:2px; margin-bottom:2px;">{{ f }}</span>
+            {% endfor %}
+          </td>
+        </tr>
         {% endfor %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
-{% else %}
-<div class="empty" style="padding:32px;">
-  <div class="icon">🔍</div>
-  <div>No confirmed signals right now. Check the Watch list below — those need flow verification.</div>
-</div>
-{% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty" style="padding:32px;">
+    <div class="icon">🔍</div>
+    <div>No confirmed signals right now. Check the Watch list below — those need flow verification.</div>
+  </div>
+  {% endif %}
 </div>
 
 {# ═══════════════════════════════════════════════════════════════════════ #}
-{# SECTION 2 — WATCH (needs flow verification)                           #}
+{# SECTION 2 — WATCH (needs flow verification) #}
 {# ═══════════════════════════════════════════════════════════════════════ #}
 {% if watch %}
 <div class="section-label">
@@ -212,59 +260,63 @@
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">
-<div style="overflow-x:auto;">
-<table class="sig-table">
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Score</th>
-      <th>Price</th>
-      <th>4H SMC</th>
-      <th>Weekly</th>
-      <th>RS</th>
-      <th>Entry</th>
-      <th>ATR SL</th>
-      <th>ATR TP</th>
-      <th>Broker Status</th>
-      <th>Flags</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for c in watch %}
-    <tr>
-      <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
-      <td><strong>{{ c.score }}</strong></td>
-      <td>Rp {{ c.price|floatformat:0 }}</td>
-      <td><span class="badge badge-green">Bullish</span></td>
-      <td>
-        {% if c.weekly.aligned %}<span style="color:var(--green); font-size:11px;">✓</span>
-        {% else %}<span style="color:var(--muted); font-size:11px;">✗</span>{% endif %}
-      </td>
-      <td style="font-size:11px;">
-        {% if c.rs %}
-          <span style="color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
-            {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
-          </span>
-        {% else %}—{% endif %}
-      </td>
-      <td style="font-size:11px;">{% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else %}—{% endif %}</td>
-      <td style="font-size:11px; color:var(--red);">{% if c.atr_levels.sl %}Rp {{ c.atr_levels.sl|floatformat:0 }}{% else %}—{% endif %}</td>
-      <td style="font-size:11px; color:var(--green);">{% if c.atr_levels.tp %}Rp {{ c.atr_levels.tp|floatformat:0 }}{% else %}—{% endif %}</td>
-      <td>
-        <span class="badge badge-yellow">{{ c.broker_source|default:"pending" }}</span>
-        <div style="font-size:10px; color:var(--muted); margin-top:2px;">{{ c.flow.signal|default:""|truncatechars:40 }}</div>
-      </td>
-      <td>{% for f in c.flags %}<span class="badge badge-blue" style="margin-right:2px;">{{ f }}</span>{% endfor %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+  <div style="overflow-x:auto;">
+    <table class="sig-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Score</th>
+          <th>Price</th>
+          <th>4H SMC</th>
+          <th>Weekly</th>
+          <th>RS</th>
+          <th>Entry</th>
+          <th>ATR SL</th>
+          <th>ATR TP</th>
+          <th>Broker Status</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in watch %}
+        <tr>
+          <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
+          <td><strong>{{ c.score }}</strong></td>
+          <td>Rp {{ c.price|floatformat:0 }}</td>
+          <td><span class="badge badge-green">Bullish</span></td>
+          <td>
+            {% if c.weekly.aligned %}<span style="color:var(--green); font-size:11px;">✓</span>
+            {% else %}<span style="color:var(--muted); font-size:11px;">✗</span>{% endif %}
+          </td>
+          <td style="font-size:11px;">
+            {% if c.rs %}
+            <span style="color:{% if c.rs.outperforming %}var(--green){% else %}var(--red){% endif %};">
+              {% if c.rs.rs > 0 %}+{% endif %}{{ c.rs.rs|floatformat:1 }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:11px;">{% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td style="font-size:11px; color:var(--red);">{% if c.atr_levels.sl %}Rp {{ c.atr_levels.sl|floatformat:0 }}{%
+            else %}—{% endif %}</td>
+          <td style="font-size:11px; color:var(--green);">{% if c.atr_levels.tp %}Rp {{ c.atr_levels.tp|floatformat:0
+            }}{% else %}—{% endif %}</td>
+          <td>
+            <span class="badge badge-yellow">{{ c.broker_source|default:"pending" }}</span>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">{{
+              c.flow.signal|default:""|truncatechars:40 }}</div>
+          </td>
+          <td>{% for f in c.flags %}<span class="badge badge-blue" style="margin-right:2px;">{{ f }}</span>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endif %}
 
 {# ═══════════════════════════════════════════════════════════════════════ #}
-{# SECTION 3 — CAUTION (technical signal, bad flow)                      #}
+{# SECTION 3 — CAUTION (technical signal, bad flow) #}
 {# ═══════════════════════════════════════════════════════════════════════ #}
 {% if caution %}
 <div class="section-label">
@@ -275,44 +327,48 @@
 </div>
 
 <div class="card" style="padding:0; overflow:hidden; border-color:rgba(255,77,109,0.25);">
-<div style="overflow-x:auto;">
-<table class="sig-table">
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Score</th>
-      <th>Price</th>
-      <th>4H SMC</th>
-      <th>Entry</th>
-      <th>Flow Signal</th>
-      <th>Flow Quality</th>
-      <th>Flags</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for c in caution %}
-    <tr>
-      <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
-      <td>{{ c.score }}</td>
-      <td>Rp {{ c.price|floatformat:0 }}</td>
-      <td><span class="badge badge-green">Bullish</span></td>
-      <td style="font-size:11px; color:var(--muted);">{% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else %}—{% endif %}</td>
-      <td style="font-size:11px; color:var(--red); max-width:220px;">{{ c.flow.signal|default:"—"|truncatechars:55 }}</td>
-      <td>
-        <span style="font-size:11px; color:var(--red); font-weight:600;">{{ c.flow_quality.quality_score }}/100</span>
-        <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:20 }}</div>
-      </td>
-      <td>{% for f in c.flags %}<span class="badge badge-blue" style="margin-right:2px;">{{ f }}</span>{% endfor %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+  <div style="overflow-x:auto;">
+    <table class="sig-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Score</th>
+          <th>Price</th>
+          <th>4H SMC</th>
+          <th>Entry</th>
+          <th>Flow Signal</th>
+          <th>Flow Quality</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in caution %}
+        <tr>
+          <td><a href="/stock/{{ c.ticker }}/">{{ c.ticker }}</a></td>
+          <td>{{ c.score }}</td>
+          <td>Rp {{ c.price|floatformat:0 }}</td>
+          <td><span class="badge badge-green">Bullish</span></td>
+          <td style="font-size:11px; color:var(--muted);">{% if c.smc.entry %}Rp {{ c.smc.entry|floatformat:0 }}{% else
+            %}—{% endif %}</td>
+          <td style="font-size:11px; color:var(--red); max-width:220px;">{{ c.flow.signal|default:"—"|truncatechars:55
+            }}</td>
+          <td>
+            <span style="font-size:11px; color:var(--red); font-weight:600;">{{ c.flow_quality.quality_score
+              }}/100</span>
+            <div style="font-size:10px; color:var(--muted);">{{ c.flow_quality.label|truncatechars:20 }}</div>
+          </td>
+          <td>{% for f in c.flags %}<span class="badge badge-blue" style="margin-right:2px;">{{ f }}</span>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endif %}
 
 {# ═══════════════════════════════════════════════════════════════════════ #}
-{# SECTION 4 — FULL WATCHLIST (all IDX universe)                         #}
+{# SECTION 4 — FULL WATCHLIST (all IDX universe) #}
 {# ═══════════════════════════════════════════════════════════════════════ #}
 <hr class="divider">
 
@@ -321,104 +377,107 @@
   <h2>Full IDX Universe Watchlist</h2>
   <span class="count-pill">{{ total_watchlist }}</span>
   <span class="desc">Every stock · broker flow from cache only · 🔥 = active signal</span>
-  <input id="wlSearch" type="text" placeholder="Filter ticker…" oninput="filterWatchlist(this.value)" style="margin-left:auto;">
+  <input id="wlSearch" type="text" placeholder="Filter ticker…" oninput="filterWatchlist(this.value)"
+    style="margin-left:auto;">
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">
-<div class="wl-scroll">
-<table class="wl-table" id="wlTable">
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th style="text-align:right;">Price</th>
-      <th style="text-align:right;">MA20</th>
-      <th>Trend</th>
-      <th>Volume</th>
-      <th>4H Bias</th>
-      <th>Near POI</th>
-      <th>Flow</th>
-      <th>Signal</th>
-    </tr>
-  </thead>
-  <tbody id="wlBody">
-    {% for s in watchlist %}
-    <tr data-ticker="{{ s.ticker }}">
-      <td>
-        {% if s.is_hot %}<span style="color:var(--accent); margin-right:4px;">🔥</span>{% endif %}
-        <a href="/stock/{{ s.ticker }}/">{{ s.ticker }}</a>
-      </td>
-      <td style="text-align:right;">Rp {{ s.price|floatformat:0 }}</td>
-      <td style="text-align:right; color:var(--muted); font-size:11px;">
-        {% if s.ma20 %}{{ s.ma20|floatformat:0 }}{% else %}—{% endif %}
-      </td>
-      <td>
-        {% if s.above_ma20 %}
-          <span style="color:var(--green); font-size:11px; font-weight:600;">▲ Above MA20</span>
-        {% else %}
-          <span style="color:var(--red); font-size:11px;">▼ Below MA20</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if s.vol_ratio %}
-          <span class="vol-bar-bg">
-            <span class="vol-bar-fill" style="width:{% if s.vol_ratio >= 3 %}100{% elif s.vol_ratio >= 1 %}{{ s.vol_ratio|floatformat:0|add:"0" }}{% else %}10{% endif %}%;
-              background:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};"></span>
-          </span>
-          <span style="font-size:11px; color:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};">
-            {{ s.vol_ratio }}×
-          </span>
-        {% else %}—{% endif %}
-      </td>
-      <td>
-        {% if s.smc_bias == 'Bullish' %}
-          <span class="bias-bull">▲ Bullish</span>
-        {% elif s.smc_bias == 'Bearish' %}
-          <span class="bias-bear">▼ Bearish</span>
-        {% elif s.smc_bias == 'Neutral' %}
-          <span class="bias-neu">─ Neutral</span>
-        {% else %}
-          <span class="bias-neu">N/A</span>
-        {% endif %}
-      </td>
-      <td style="text-align:center;">
-        {% if s.near_poi %}
-          <span class="badge badge-green" style="font-size:10px;">In Zone</span>
-        {% else %}
-          <span style="color:var(--muted); font-size:11px;">—</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if s.flow_eligible == True %}
-          <span class="badge badge-green" style="font-size:10px;">✓ Eligible</span>
-        {% elif s.flow_eligible == False and s.flow_source != 'none' %}
-          <span class="badge badge-red" style="font-size:10px;">✗ Skip</span>
-        {% else %}
-          <span style="color:var(--muted); font-size:11px;">No cache</span>
-        {% endif %}
-      </td>
-      <td style="font-size:10px; color:var(--muted); max-width:160px;">
-        {{ s.flow_signal|default:"—"|truncatechars:35 }}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+  <div class="wl-scroll">
+    <table class="wl-table" id="wlTable">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th style="text-align:right;">Price</th>
+          <th style="text-align:right;">MA20</th>
+          <th>Trend</th>
+          <th>Volume</th>
+          <th>4H Bias</th>
+          <th>Near POI</th>
+          <th>Flow</th>
+          <th>Signal</th>
+        </tr>
+      </thead>
+      <tbody id="wlBody">
+        {% for s in watchlist %}
+        <tr data-ticker="{{ s.ticker }}">
+          <td>
+            {% if s.is_hot %}<span style="color:var(--accent); margin-right:4px;">🔥</span>{% endif %}
+            <a href="/stock/{{ s.ticker }}/">{{ s.ticker }}</a>
+          </td>
+          <td style="text-align:right;">Rp {{ s.price|floatformat:0 }}</td>
+          <td style="text-align:right; color:var(--muted); font-size:11px;">
+            {% if s.ma20 %}{{ s.ma20|floatformat:0 }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.above_ma20 %}
+            <span style="color:var(--green); font-size:11px; font-weight:600;">▲ Above MA20</span>
+            {% else %}
+            <span style="color:var(--red); font-size:11px;">▼ Below MA20</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.vol_ratio %}
+            <span class="vol-bar-bg">
+              <span class="vol-bar-fill" style="width:{% if s.vol_ratio >= 3 %}100{% elif s.vol_ratio >= 1 %}{{ s.vol_ratio|floatformat:0|add:"0" }}{% else %}10{% endif %}%; background:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};"></span>
+            </span>
+            <span style="font-size:11px; color:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};">
+              {{ s.vol_ratio }}×
+            </span>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+          <td>
+            {% if s.smc_bias == 'Bullish' %}
+            <span class="bias-bull">▲ Bullish</span>
+            {% elif s.smc_bias == 'Bearish' %}
+            <span class="bias-bear">▼ Bearish</span>
+            {% elif s.smc_bias == 'Neutral' %}
+            <span class="bias-neu">─ Neutral</span>
+            {% else %}
+            <span class="bias-neu">N/A</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if s.near_poi %}
+            <span class="badge badge-green" style="font-size:10px;">In Zone</span>
+            {% else %}
+            <span style="color:var(--muted); font-size:11px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.flow_eligible == True %}
+            <span class="badge badge-green" style="font-size:10px;">✓ Eligible</span>
+            {% elif s.flow_eligible == False and s.flow_source != 'none' %}
+            <span class="badge badge-red" style="font-size:10px;">✗ Skip</span>
+            {% else %}
+            <span style="color:var(--muted); font-size:11px;">No cache</span>
+            {% endif %}
+          </td>
+          <td style="font-size:10px; color:var(--muted); max-width:160px;">
+            {{ s.flow_signal|default:"—"|truncatechars:35 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div style="margin-top:10px; font-size:11px; color:var(--muted); display:flex; gap:20px; flex-wrap:wrap;">
   <span>🔥 = active SMC signal today</span>
-  <span><strong style="color:var(--text);">Flow</strong> shown from 24h broker cache only — no quota spent on watchlist</span>
+  <span><strong style="color:var(--text);">Flow</strong> shown from 24h broker cache only — no quota spent on
+    watchlist</span>
   <span><strong style="color:var(--text);">Volume</strong> ratio vs 10-day average</span>
 </div>
 
 <script>
-function filterWatchlist(q) {
-  q = q.trim().toUpperCase();
-  document.querySelectorAll('#wlBody tr').forEach(row => {
-    const ticker = row.dataset.ticker || '';
-    row.style.display = (!q || ticker.includes(q)) ? '' : 'none';
-  });
-}
+  function filterWatchlist(q) {
+    q = q.trim().toUpperCase();
+    document.querySelectorAll('#wlBody tr').forEach(row => {
+      const ticker = row.dataset.ticker || '';
+      row.style.display = (!q || ticker.includes(q)) ? '' : 'none';
+    });
+  }
 </script>
 {% endblock %}
