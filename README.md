@@ -5,7 +5,6 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-4.2-092E20?style=flat&logo=django&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 ![Backtest](https://img.shields.io/badge/Backtest-10yr%20%7C%2056.3%25%20WR-00d9ff?style=flat)
 
 ---
@@ -163,12 +162,6 @@ Each signal is graded A–D based on confluence quality:
 | B | 4–5 / 7 signals | 75% | Solid trade |
 | C | 2–3 / 7 signals | 50% | Marginal |
 | D | 0–1 / 7 signals | Skip | No edge |
-
----
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
