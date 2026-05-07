@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}IDX Smart Screener{% endblock %}</title>
+  <title>{% block title %}STIX — Systematic Trading Intelligence eXpert{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f080c;
-      --surface: #1a0f16;
-      --surface2: #25161f;
-      --border: rgba(255, 99, 219, 0.18);
-      --accent: #ff63db;
-      --accent2: #ff9cf0;
-      --green: #00e676;
-      --red: #ff4d6d;
+      --bg: #0f0f15;
+      --surface: #1a1a24;
+      --surface2: #232332;
+      --border: rgba(99, 179, 255, 0.15);
+      --accent: #00d9ff;
+      --accent2: #0099ff;
+      --green: #00ff88;
+      --red: #ff3333;
       --yellow: #ffd700;
-      --text: #fceef5;
-      --muted: #a68498;
+      --text: #f0f0ff;
+      --muted: #a0a0c0;
       --radius: 10px;
     }
 
@@ -154,15 +154,17 @@
       border-color: var(--accent);
     }
     .btn {
-      background: linear-gradient(135deg, var(--accent), #ff66e5);
-      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
       border: none;
       border-radius: var(--radius);
       padding: 8px 16px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      transition: all 0.3s;
     }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,217,255,0.3); }
     .btn:hover { opacity: 0.85; }
 
     .filter-bar {
@@ -195,7 +197,7 @@
 <body>
 
 <nav>
-  <a href="/" class="brand">STI<span>X</span></a>
+  <a href="/" class="brand" title="Systematic Trading Intelligence eXpert">STI<span>X</span></a>
   <a href="/dashboard/" {% if '/dashboard/' in request.path %}class="active"{% endif %}>Dashboard</a>
   <a href="/screener/"  {% if '/screener/'  in request.path %}class="active"{% endif %}>Screener</a>
   <a href="/backtest/"  {% if '/backtest/'  in request.path %}class="active"{% endif %}>Backtest</a>

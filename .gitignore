@@ -1,10 +1,42 @@
+# ── Environment & Secrets ─────────────────────────────────────────────────────
 .env
+.env.local
+.env.*.local
+
+# ── Python ────────────────────────────────────────────────────────────────────
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Django ────────────────────────────────────────────────────────────────────
 db.sqlite3
-.DS_Store
-.idea/
-.vscode/
+db.sqlite3-journal
+staticfiles/
 static_root/
 media/
+*.log
+
+# ── Runtime Cache (auto-generated, do not commit) ─────────────────────────────
+backtest_cache.json
+backtest_dual_cache.json
+backtest_fca_cache.json
+backtest_v4_cache.json
+broker_cache.json
+api_usage.json
+
+# ── OS & Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Claude AI Workspace ───────────────────────────────────────────────────────
+.claude/

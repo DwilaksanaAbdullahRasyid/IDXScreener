@@ -95,9 +95,41 @@ IDX_ADDITIONAL = [
     "KPIG", "CBKS", "MPXJ", "SCLD", "RINA",
 ]
 
-# Full expanded universe: ~180+ IDX stocks (grade system filters for quality)
-# Includes less-liquid stocks; trades will be graded by confluence and performance
-IDX_UNIVERSE = LQ45 + [t for t in IDX_ADDITIONAL if t not in LQ45]
+# ── FCA (Full Call Auction) Stocks — Official IDX List (May 1, 2026) ──────────
+# 163 FCA stocks from Papan Pemantauan Khusus (Special Monitoring Board)
+# FCA: Trade in 6 discrete call auctions/day, not continuous
+IDX_FCA_STOCKS = [
+    "OCAP", "TAXI", "ANDI", "BLTA", "BSWD", "BTEK", "CMPP", "ELTY", "IKAI", "JGLE",
+    "BAUT", "ARKA", "BEKS", "PPRO", "PURA", "KBAG", "KREN", "RBMS", "IBST", "HRME",
+    "WINR", "TGRA", "TAMU", "TARA", "PBRX", "MIRA", "KIAS", "NASA", "EPAC", "HADE",
+    "ASMI", "WSBP", "TRIO", "DUCK", "LCGP", "LMSH", "SKYB", "SMCB", "SUPR", "SWAT",
+    "RAFI", "SAGE", "KKES", "OMRE", "DIGI", "IPTV", "BHIT", "BEBS", "BTEL", "CBMF",
+    "COWL", "BAPI", "ARMY", "IIKP", "HOME", "GAMA", "NUSA", "PLAS", "MFMI", "MTFN",
+    "KBRI", "MABA", "LMAS", "SIMA", "RIMO", "POOL", "POSA", "SUGI", "WSKT", "TOYS",
+    "TRIL", "KARW", "ENVY", "SBAT", "MYTX", "BKDP", "BLTZ", "BOSS", "ARTI", "MAGP",
+    "SCPI", "BIKA", "WICO", "UNIT", "JSKY", "BIMA", "POLY", "KAYU", "TDPM", "IPPE",
+    "ZINC", "SRIL", "PCAR", "MTSM", "FASW", "CNTX", "PLIN", "MARI", "BATA", "TFCO",
+    "MTRA", "SMRU", "VIVA", "GOLL", "HITS", "CPRI", "WMPP", "SOSS", "TELE", "ALMI",
+    "ETWA", "DEAL", "CNKO", "ABBA", "FIMP", "PTMR", "MTPS", "KOIN", "WIKA", "FOOD",
+    "ALTO", "INAF", "INPS", "UNSP", "TOPS", "TRAM", "HOTL", "PMMP", "SINI", "SQMI",
+    "MPPA", "HILL", "GLOB", "IBFN", "INTA", "CANI", "MDRN", "TGUK", "HKMU", "RSGK",
+    "PGJO", "ACST", "TIRT", "TAMA", "EURO", "DUTI", "IFSH", "JECC", "AKKU", "BABY",
+    "CSAP", "TECH", "PTDU", "PURE", "MENN", "KOPI", "MLIA", "URBN", "ZBRA", "POLL",
+    "WBSA", "MKNT", "BAIK",
+]
+
+# ── Separate Universes: Non-FCA (Original Baseline) + FCA (New) ──────────────
+# Non-FCA Universe: Original ~185 stocks (LQ45 + select from IDX_ADDITIONAL)
+# This preserves the original 114-trade baseline
+IDX_UNIVERSE_NONFCA = LQ45 + [t for t in IDX_ADDITIONAL if t not in LQ45]
+
+# FCA Universe: 163 Full Call Auction stocks (separate strategy)
+IDX_UNIVERSE_FCA = IDX_FCA_STOCKS
+
+# Full expanded universe: ~350+ IDX stocks (includes FCA call-auction stocks)
+# Includes LQ45 (liquid), IDX_ADDITIONAL (less-liquid), and FCA (call-auction 6x/day)
+# Grade system filters for quality; FCA trades flagged separately
+IDX_UNIVERSE = IDX_UNIVERSE_NONFCA + IDX_UNIVERSE_FCA
 
 # ── Broker Lists ─────────────────────────────────────────────────────────────
 ALL_FOREIGN = ['YU','CG','KZ','CS','DP','GW','BK','DU','HD','AG','BQ',
@@ -215,12 +247,6 @@ def get_api_status() -> dict:
         "broker_cached":     cached_tickers,
         "broker_cache_size": len(cached_tickers),
     }
-
-# ── FCA / Suspended Exclusion ─────────────────────────────────────────────────
-_KNOWN_FCA_FALLBACK: set[str] = {
-    "ATAP", "RONY", "TELE", "JSKY", "IATA", "BPTR", "FUJI", "MYOH",
-    "SMKL", "FIRE", "NELY", "TAXI", "SUGI", "MITI", "DIGI",
-}
 
 def fetch_fca_suspended_stocks() -> set:
     cached = _cache_get("fca_stocks", ttl=21600)
@@ -931,9 +957,9 @@ def screen_market():
     ihsg_daily    = fetch_ihsg()
     ihsg_daily_ok = ihsg_daily.get("score", 0) >= 50   # Bull or Strong Bull only
 
-    # Exclude FCA / suspended stocks
-    fca_set = fetch_fca_suspended_stocks()
-    universe = [t for t in IDX_UNIVERSE if t not in fca_set]
+    # Include FCA stocks in universe (they are now part of IDX_UNIVERSE)
+    # FCA stocks trade 6 call auctions/day; strategy handles both continuous & FCA
+    universe = IDX_UNIVERSE
 
     tickers = [f"{t}.JK" for t in universe]
 
@@ -1042,6 +1068,32 @@ def screen_market():
           + (15 if trend_4h_bullish else 0)      # 4H SMC bias bonus
         )
 
+        # Calculate backtest entry levels (TP/SL based on strategy_config)
+        from .strategy_config import TP1_R, TP2_R, TP3_R, SL_FACTOR
+
+        entry_price = curr_price_1h
+        poi_low = poi_low_4h
+        poi_high = poi_high_4h
+        poi_range = poi_high - poi_low if poi_high > poi_low else 0.01
+
+        # Risk is distance to POI low (tighter SL)
+        risk_amount = max(entry_price - poi_low * (1 - SL_FACTOR), poi_range * 0.015)
+
+        # Calculate TP and SL levels
+        tp1_level = entry_price + (risk_amount * TP1_R)
+        tp2_level = entry_price + (risk_amount * TP2_R)
+        tp3_level = entry_price + (risk_amount * TP3_R)
+        sl_level = poi_low * (1 - SL_FACTOR)
+
+        # ATR-based SL (optional, use tighter of two)
+        try:
+            if df_1d is not None and len(df_1d) >= 14:
+                atr = float(pd.Series(df_1d["High"] - df_1d["Low"]).rolling(14).mean().iloc[-1])
+                atr_sl = entry_price - (atr * 1.5)
+                sl_level = max(sl_level, atr_sl)  # Use tighter SL
+        except Exception:
+            pass
+
         technical_candidates.append({
             "ticker":     t,
             "score":      tech_score,
@@ -1053,16 +1105,33 @@ def screen_market():
             "poi_4h":     {"low": poi_low_4h, "high": poi_high_4h},
             "trend_vol":  tv,
             "df_1d":      df_1d,  # keep for ATR computation (not serialised)
+
+            # Backtest entry levels — used by trade log to track without EOD exit
+            "backtest_entry": {
+                "entry_price": round(entry_price, 2),
+                "tp1": round(tp1_level, 2),
+                "tp2": round(tp2_level, 2),
+                "tp3": round(tp3_level, 2),
+                "sl": round(sl_level, 2),
+                "risk_amount": round(risk_amount, 2),
+                "reward_r": round(risk_amount * TP3_R / risk_amount, 3) if risk_amount > 0 else 3.0,
+            }
         })
 
     technical_candidates.sort(key=lambda x: x["score"], reverse=True)
     passed_technical_set = {c["ticker"] for c in technical_candidates}
 
-    # ── Load broker disk cache once (shared by enrichment + watchlist) ────────
+    # ── Load broker disk cache once ────────────────────────────────────────────
     disk_cache = _load_broker_disk()
     now        = time.time()
 
-    # ── Enrich technical candidates with v2 + broker flow ────────────────────
+    # ── SMART API USAGE: Only fetch broker flow for top candidates ─────────────
+    # Only request broker data for candidates within API quota range.
+    # This prevents wasted API calls on low-scoring technical setups.
+    max_api_requests = max(api_remaining() - 2, 0)  # Reserve 2 for dashboard/pages
+    candidates_for_flow = technical_candidates[:max(max_api_requests, 5)]  # At least top 5
+
+    # ── Enrich candidates with broker flow ──────────────────────────────────────
     # Signals are split into three buckets:
     #   confirmed  — flow eligible (smart money confirmed) ← TRUE signals
     #   watch      — no broker data yet (quota/no cache)   ← need verification
@@ -1076,24 +1145,30 @@ def screen_market():
         t_jk  = f"{t}.JK"
         df_1d = cand.pop("df_1d", None)  # remove DataFrame before serialisation
 
-        # ── Broker flow: cache → live GoAPI → pending ─────────────────────────
+        # ── Broker flow: ONLY fetch for top candidates to save API ───────────────
+        should_fetch_flow = cand in candidates_for_flow
+
         has_cache = t in disk_cache and _broker_cache_valid(disk_cache[t])
         if has_cache:
             broker_data = disk_cache[t]["data"]
             cand["broker_source"] = "cached"
-        elif api_remaining() > 0:
+        elif should_fetch_flow and api_remaining() > 0:
             broker_data = fetch_broker_summary(t)
             cand["broker_source"] = broker_data.get("source", "live")
         else:
             broker_data = None
-            cand["broker_source"] = "pending"
+            cand["broker_source"] = "pending" if should_fetch_flow else "not_checked"
 
         if broker_data:
             flow         = analyze_flow(broker_data)
             flow_quality = score_flow_quality(broker_data)
         else:
-            flow         = {"signal": "No broker data — check quota/cache", "eligible": False, "category": "unknown"}
-            flow_quality = {"quality_score": 0, "label": "Pending"}
+            flow         = {
+                "signal": "Awaiting broker confirmation" if should_fetch_flow else "Lower priority candidate",
+                "eligible": False,
+                "category": "unknown"
+            }
+            flow_quality = {"quality_score": 0, "label": "Pending" if should_fetch_flow else "Not Checked"}
 
         cand["flow"]         = flow
         cand["flow_quality"] = flow_quality

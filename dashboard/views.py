@@ -41,12 +41,43 @@ def _get_cached_bt_stats():
         return None
 
 
+def _transform_backtest_metrics(metrics):
+    """Transform backtest metrics keys to match template expectations."""
+    if not metrics:
+        return {}
+    return {
+        "trades": metrics.get("trades", 0),
+        "wins": metrics.get("wins", 0),
+        "losses": metrics.get("losses", 0),
+        "win_rate": metrics.get("wr", 0),
+        "total_r": metrics.get("total_r", 0),
+        "avg_win_r": metrics.get("avg_win", 0),
+        "avg_loss_r": metrics.get("avg_loss", 0),
+        "profit_factor": metrics.get("pf", 0),
+    }
+
+
 def landing_page(request):
     """STIX landing page — first impression before the dashboard."""
+    from dashboard.backtest_dual import run_dual_backtest
+    from dashboard.strategy_config import format_strategy_summary, BACKTEST_BASELINE, NON_FCA_BASELINE, FCA_ADDITION
+
     ihsg = analysis.fetch_ihsg()
     screener_data = analysis.screen_market()
     summary = tl.get_summary_stats(days=30)
     recent_trades = tl.get_trade_log_history(days=7)[:5]  # last 5 signals
+
+    # Fetch backtest metrics (uses cache, no re-run unless forced)
+    try:
+        bt_results = run_dual_backtest(force=False)
+        bt_metrics = bt_results.get("metrics", {})
+        combined_metrics = _transform_backtest_metrics(bt_metrics.get("combined", BACKTEST_BASELINE))
+        non_fca_metrics = _transform_backtest_metrics(bt_metrics.get("non_fca", NON_FCA_BASELINE))
+        fca_metrics = _transform_backtest_metrics(bt_metrics.get("fca", FCA_ADDITION))
+    except Exception:
+        combined_metrics = _transform_backtest_metrics(BACKTEST_BASELINE)
+        non_fca_metrics = _transform_backtest_metrics(NON_FCA_BASELINE)
+        fca_metrics = _transform_backtest_metrics(FCA_ADDITION)
 
     context = {
         "ihsg":           ihsg,
@@ -55,7 +86,17 @@ def landing_page(request):
         "summary":        summary,
         "recent_trades":  recent_trades,
         "today":          datetime.date.today(),
-        "bt_stats":       _get_cached_bt_stats(),   # None if no backtest cache
+        "bt_stats":       _get_cached_bt_stats(),   # 48h cache for hero metrics
+
+        # Backtest metrics breakdown
+        "backtest_metrics": {
+            "combined": combined_metrics,
+            "non_fca": non_fca_metrics,
+            "fca": fca_metrics,
+        },
+
+        # Strategy summary
+        "strategy_summary": format_strategy_summary(),
     }
     return render(request, "dashboard/landing.html", context)
 
@@ -81,14 +122,17 @@ def index(request):
 
 
 def screener(request):
-    """Screener page — IDX signal filter + full universe watchlist."""
+    """Screener page — Daily V3.1 strategy signals: confirmed, watch, and caution buckets."""
+    # Fetch market regime (IHSG condition)
+    ihsg = analysis.fetch_ihsg()
+
     try:
         screener_data = analysis.screen_market()
     except Exception as e:
         import traceback
         log.error(f"Screener failed: {str(e)}\n{traceback.format_exc()}")
         screener_data = {
-            "confirmed": [], "watch": [], "caution": [], "watchlist": [],
+            "confirmed": [], "watch": [], "caution": [],
             "api_calls_remaining": 28, "api_calls_today": 0,
             "error": f"Screener load failed: {str(e)[:200]}"
         }
@@ -96,22 +140,20 @@ def screener(request):
     confirmed = screener_data.get("confirmed", [])
     watch     = screener_data.get("watch",     [])
     caution   = screener_data.get("caution",   [])
-    watchlist = screener_data.get("watchlist", [])
 
     context = {
+        # Market regime condition
+        "ihsg": ihsg,
         # Error handling
         "error": screener_data.get("error"),
-        # Signal buckets
+        # Signal buckets (confirmed, watch, caution)
         "confirmed":  confirmed,
         "watch":      watch,
         "caution":    caution,
-        # Full watchlist
-        "watchlist":  watchlist,
         # Counts
         "total_confirmed": len(confirmed),
         "total_watch":     len(watch),
         "total_caution":   len(caution),
-        "total_watchlist": len(watchlist),
         # API meta
         "api_calls_remaining": screener_data.get("api_calls_remaining", 28),
         "api_calls_today":     screener_data.get("api_calls_today", 0),
@@ -172,6 +214,49 @@ def api_backtest(request):
     try:
         force = request.GET.get("force", "0") == "1"
         data = bt.run_backtest(force=force)
+        return JsonResponse(data)
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
+
+
+@require_GET
+def api_backtest_dual(request):
+    """
+    Runs (or returns cached) DUAL backtest: Non-FCA baseline + FCA expansion.
+    Combined metrics showing all 142 trades.
+    Pass ?force=1 to bypass cache and re-run from scratch.
+    """
+    try:
+        from dashboard.backtest_dual import run_dual_backtest
+        force = request.GET.get("force", "0") == "1"
+        result = run_dual_backtest(force=force)
+
+        # Transform result to match backtest.py format for dashboard
+        m = result["metrics"]["combined"]
+        trades = result["trades"]["combined"]
+
+        # Format for dashboard display
+        data = {
+            "trades": trades,
+            "metrics": {
+                "total_trades": m["trades"],
+                "wins": m["wins"],
+                "losses": m["losses"],
+                "win_rate": m["wr"],
+                "total_r": m["total_r"],
+                "avg_win_r": m["avg_win"],
+                "avg_loss_r": m["avg_loss"],
+                "profit_factor": m.get("pf", 0),
+                "breakdown": {
+                    "non_fca": _transform_backtest_metrics(result["metrics"]["non_fca"]),
+                    "fca": _transform_backtest_metrics(result["metrics"]["fca"]),
+                },
+            }
+        }
         return JsonResponse(data)
     except Exception as e:
         import traceback

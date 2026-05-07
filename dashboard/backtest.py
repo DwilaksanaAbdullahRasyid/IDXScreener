@@ -49,6 +49,8 @@ from pathlib import Path
 from .analysis import (
     extract_smc,
     IDX_UNIVERSE,
+    IDX_UNIVERSE_NONFCA,
+    IDX_FCA_STOCKS,
     _cache_get,
     _cache_set,
 )
@@ -274,7 +276,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             return disk
 
     if tickers is None:
-        tickers = IDX_UNIVERSE
+        tickers = IDX_UNIVERSE_NONFCA  # Use original non-FCA baseline (~185 stocks, 114 trades)
 
     tickers_jk  = [f"{t}.JK" for t in tickers]
     tickers_str = " ".join(tickers_jk)
@@ -574,8 +576,13 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
                 position_size_pct = 1.0
                 fee_r = (risk / entry_price * 100 * 0.0045) / 100  # 0.45% round-trip fee
 
+                # Check if stock is FCA (call-auction 6x/day)
+                from .analysis import IDX_FCA_STOCKS
+                is_fca_stock = t in IDX_FCA_STOCKS
+
                 all_trades.append({
                     "ticker":            t,
+                    "is_fca":            is_fca_stock,  # FCA: 6 call auctions/day (not continuous)
                     "entry_date":        dates[entry_idx] if entry_idx < n else "",
                     "exit_date":         dates[exit_idx]  if exit_idx  < n else "",
                     "entry_price":       round(entry_price, 2),
@@ -672,6 +679,33 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
             "avg_r":    round(g_pnl_r / g_total, 3) if g_total else 0.0,
         }
 
+    # ── FCA vs Non-FCA breakdown (call-auction vs continuous trading) ──────────
+    fca_trades   = [t for t in all_trades if t.get("is_fca", False)]
+    non_fca_trades = [t for t in all_trades if not t.get("is_fca", False)]
+
+    fca_wins = [t for t in fca_trades if t["outcome"] == "WIN"]
+    non_fca_wins = [t for t in non_fca_trades if t["outcome"] == "WIN"]
+
+    fca_stats = {
+        "trades":   len(fca_trades),
+        "wins":     len(fca_wins),
+        "losses":   len(fca_trades) - len(fca_wins),
+        "win_rate": round(len(fca_wins) / len(fca_trades) * 100, 1) if fca_trades else 0.0,
+        "total_r":  round(sum(t["pnl_r"] for t in fca_trades), 2),
+        "avg_r":    round(sum(t["pnl_r"] for t in fca_trades) / len(fca_trades), 3) if fca_trades else 0.0,
+        "note":     "FCA stocks trade 6 call auctions/day (discrete), not continuous"
+    }
+
+    non_fca_stats = {
+        "trades":   len(non_fca_trades),
+        "wins":     len(non_fca_wins),
+        "losses":   len(non_fca_trades) - len(non_fca_wins),
+        "win_rate": round(len(non_fca_wins) / len(non_fca_trades) * 100, 1) if non_fca_trades else 0.0,
+        "total_r":  round(sum(t["pnl_r"] for t in non_fca_trades), 2),
+        "avg_r":    round(sum(t["pnl_r"] for t in non_fca_trades) / len(non_fca_trades), 3) if non_fca_trades else 0.0,
+        "note":     "Non-FCA stocks trade continuously"
+    }
+
     # ── Monthly P&L ───────────────────────────────────────────────────────────
     monthly = {}
     for tr in all_trades:
@@ -730,6 +764,7 @@ def run_backtest(tickers: list = None, force: bool = False) -> dict:
         "dd_curve":     dd_curve,
         "metrics":      metrics,
         "grade_stats":  grade_stats,
+        "fca_stats":    {"fca": fca_stats, "non_fca": non_fca_stats},
         "ticker_stats": ticker_stats,
         "monthly_pnl":  monthly,
         "params": {

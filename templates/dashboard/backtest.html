@@ -779,7 +779,7 @@
       : 'Loading backtest results…';
 
     try {
-      const url = force ? '/api/backtest/?force=1' : '/api/backtest/';
+      const url = force ? '/api/backtest_dual/?force=1' : '/api/backtest_dual/';
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();

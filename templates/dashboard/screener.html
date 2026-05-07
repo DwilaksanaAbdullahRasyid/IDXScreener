@@ -33,17 +33,6 @@
     margin-left: auto;
   }
 
-  /* Compact table for watchlist */
-  .wl-table td {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-
-  .wl-table th {
-    font-size: 10px;
-    padding: 5px 10px;
-  }
-
   /* Signal table */
   .sig-table td {
     padding: 9px 11px;
@@ -91,40 +80,6 @@
     background: var(--accent);
   }
 
-  /* Watchlist search */
-  #wlSearch {
-    width: 240px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-
-  #wlSearch:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  /* Sticky watchlist header */
-  .wl-scroll {
-    max-height: 520px;
-    overflow-y: auto;
-  }
-
-  .wl-scroll thead th {
-    position: sticky;
-    top: 0;
-    background: var(--surface);
-    z-index: 1;
-  }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 32px 0 0;
-  }
 </style>
 {% endblock %}
 
@@ -133,7 +88,7 @@
   style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
   <div>
     <h1>Stock Screener</h1>
-    <p>IDX Universe (~87 stocks) · SMC structure + Smart Money flow + v2 enhancements</p>
+    <p>Daily V3.1 Strategy — 6-filter entry system · Smart Money flow confirmation · Live signal tracking</p>
   </div>
   <div style="font-size:12px; color:var(--muted); text-align:right; padding-top:4px;">
     GoAPI quota: <strong style="color:var(--text);">{{ api_calls_remaining }}/28</strong> remaining
@@ -141,9 +96,76 @@
   </div>
 </div>
 
+{# ═══════════════════════════════════════════════════════════════════════ #}
+{# MARKET REGIME CONDITION — Capital Protection Gate #}
+{# ═══════════════════════════════════════════════════════════════════════ #}
+<div class="card" style="{% if ihsg.score >= 50 %}border-left: 4px solid var(--green);{% else %}border-left: 4px solid var(--red);{% endif %} margin-bottom: 24px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <div>
+          <div style="font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Market Regime (IHSG Index)</div>
+          <div style="font-size: 18px; font-weight: 700; color: var(--text); margin-top: 2px;">
+            {{ ihsg.status }}
+            <span style="font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 8px;">Score: {{ ihsg.score }}/100</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5;">
+        {% if ihsg.score >= 70 %}
+          <strong style="color: var(--green);">Strong Bull Market</strong> — Optimal conditions for long entries. Market momentum is strong and sustainable.
+        {% elif ihsg.score >= 50 %}
+          <strong style="color: var(--green);">Bull Market</strong> — Favorable conditions. Market structure supports uptrends.
+        {% elif ihsg.score >= 30 %}
+          <strong style="color: var(--yellow);">Bear Market</strong> — Caution mode. The strategy filters out entries in declining markets to protect capital.
+        {% else %}
+          <strong style="color: var(--red);">Strong Bear Market 💀</strong> — High risk environment. No entries allowed. Protecting capital is the right move.
+        {% endif %}
+      </div>
+    </div>
+    <div style="text-align: center; padding: 16px; background: rgba(99,179,255,0.1); border-radius: 12px; border: 1px solid var(--border); min-width: 140px;">
+      <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">IHSG Price</div>
+      <div style="font-size: 16px; font-weight: 700; color: var(--text);">{{ ihsg.current|floatformat:0 }}</div>
+      <div style="font-size: 10px; color: var(--muted); margin-top: 4px;">
+        MA20: {{ ihsg.ma20|floatformat:0 }}<br>
+        MA50: {{ ihsg.ma50|floatformat:0 }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Capital Protection Message #}
+{% if ihsg.score < 50 %}
+<div style="background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; border-left: 4px solid var(--red);">
+  <div style="display: flex; gap: 12px; align-items: flex-start;">
+    <span style="font-size: 18px; flex-shrink: 0;">🛡️</span>
+    <div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 4px;">Market Protection Active</div>
+      <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+        The market is in a <strong>Bear/Declining</strong> regime. Taking no trade right now is <strong>a strategic action to protect your capital</strong>, not a failure.
+        The best traders know that <strong>avoiding losses is as important as capturing wins</strong>. Sit in cash until the market regime improves to Bull conditions (IHSG score ≥ 50).
+      </div>
+    </div>
+  </div>
+</div>
+{% elif total_confirmed == 0 and total_watch == 0 %}
+<div style="background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; border-left: 4px solid var(--yellow);">
+  <div style="display: flex; gap: 12px; align-items: flex-start;">
+    <div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 4px;">No Signals Yet</div>
+      <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+        The market is in a <strong>Bull regime</strong> (IHSG: {{ ihsg.score }}), but today's stocks don't meet all 6 entry filters.
+        This is <strong>not a failure</strong> — it's the strategy working as designed. <strong>Waiting for high-probability setups protects your capital</strong>
+        from false signals and low-conviction trades. Quality over quantity always wins in trading.
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% if error %}
 <div style="background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.3); border-radius: 4px; padding: 12px 16px; margin: 16px 0; color: #dc3545;">
-  <strong>⚠ Screener Error:</strong> {{ error }}
+  <strong>Screener Error:</strong> {{ error }}
 </div>
 {% endif %}
 
@@ -152,7 +174,6 @@
 {# Passed: 4H Bullish SMC + Trend/POI + Eligible broker flow #}
 {# ═══════════════════════════════════════════════════════════════════════ #}
 <div class="section-label">
-  <span style="font-size:18px;">🚀</span>
   <h2>Confirmed Signals</h2>
   <span class="count-pill">{{ total_confirmed }}</span>
   <span class="desc">4H Bullish SMC &amp; Near POI/Uptrend &amp; Smart Money flow eligible</span>
@@ -253,7 +274,6 @@
 {# ═══════════════════════════════════════════════════════════════════════ #}
 {% if watch %}
 <div class="section-label">
-  <span style="font-size:18px;">👁</span>
   <h2>Watch — Needs Flow Verification</h2>
   <span class="count-pill">{{ total_watch }}</span>
   <span class="desc">Passed technical filter · no broker cache yet (or simulated) · needs GoAPI data</span>
@@ -320,7 +340,6 @@
 {# ═══════════════════════════════════════════════════════════════════════ #}
 {% if caution %}
 <div class="section-label">
-  <span style="font-size:18px;">⚠️</span>
   <h2>Caution — Flow Rejected</h2>
   <span class="count-pill">{{ total_caution }}</span>
   <span class="desc">Passed technical filter · broker data confirmed · flow NOT eligible (retail / mixed)</span>
@@ -365,119 +384,4 @@
     </table>
   </div>
 </div>
-{% endif %}
-
-{# ═══════════════════════════════════════════════════════════════════════ #}
-{# SECTION 4 — FULL WATCHLIST (all IDX universe) #}
-{# ═══════════════════════════════════════════════════════════════════════ #}
-<hr class="divider">
-
-<div class="section-label">
-  <span style="font-size:18px;">📋</span>
-  <h2>Full IDX Universe Watchlist</h2>
-  <span class="count-pill">{{ total_watchlist }}</span>
-  <span class="desc">Every stock · broker flow from cache only · 🔥 = active signal</span>
-  <input id="wlSearch" type="text" placeholder="Filter ticker…" oninput="filterWatchlist(this.value)"
-    style="margin-left:auto;">
-</div>
-
-<div class="card" style="padding:0; overflow:hidden;">
-  <div class="wl-scroll">
-    <table class="wl-table" id="wlTable">
-      <thead>
-        <tr>
-          <th>Ticker</th>
-          <th style="text-align:right;">Price</th>
-          <th style="text-align:right;">MA20</th>
-          <th>Trend</th>
-          <th>Volume</th>
-          <th>4H Bias</th>
-          <th>Near POI</th>
-          <th>Flow</th>
-          <th>Signal</th>
-        </tr>
-      </thead>
-      <tbody id="wlBody">
-        {% for s in watchlist %}
-        <tr data-ticker="{{ s.ticker }}">
-          <td>
-            {% if s.is_hot %}<span style="color:var(--accent); margin-right:4px;">🔥</span>{% endif %}
-            <a href="/stock/{{ s.ticker }}/">{{ s.ticker }}</a>
-          </td>
-          <td style="text-align:right;">Rp {{ s.price|floatformat:0 }}</td>
-          <td style="text-align:right; color:var(--muted); font-size:11px;">
-            {% if s.ma20 %}{{ s.ma20|floatformat:0 }}{% else %}—{% endif %}
-          </td>
-          <td>
-            {% if s.above_ma20 %}
-            <span style="color:var(--green); font-size:11px; font-weight:600;">▲ Above MA20</span>
-            {% else %}
-            <span style="color:var(--red); font-size:11px;">▼ Below MA20</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if s.vol_ratio %}
-            <span class="vol-bar-bg">
-              <span class="vol-bar-fill" style="width:{% if s.vol_ratio >= 3 %}100{% elif s.vol_ratio >= 1 %}{{ s.vol_ratio|floatformat:0|add:"0" }}{% else %}10{% endif %}%; background:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};"></span>
-            </span>
-            <span style="font-size:11px; color:{% if s.vol_valid %}var(--green){% else %}var(--muted){% endif %};">
-              {{ s.vol_ratio }}×
-            </span>
-            {% else %}
-            —
-            {% endif %}
-          </td>
-          <td>
-            {% if s.smc_bias == 'Bullish' %}
-            <span class="bias-bull">▲ Bullish</span>
-            {% elif s.smc_bias == 'Bearish' %}
-            <span class="bias-bear">▼ Bearish</span>
-            {% elif s.smc_bias == 'Neutral' %}
-            <span class="bias-neu">─ Neutral</span>
-            {% else %}
-            <span class="bias-neu">N/A</span>
-            {% endif %}
-          </td>
-          <td style="text-align:center;">
-            {% if s.near_poi %}
-            <span class="badge badge-green" style="font-size:10px;">In Zone</span>
-            {% else %}
-            <span style="color:var(--muted); font-size:11px;">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if s.flow_eligible == True %}
-            <span class="badge badge-green" style="font-size:10px;">✓ Eligible</span>
-            {% elif s.flow_eligible == False and s.flow_source != 'none' %}
-            <span class="badge badge-red" style="font-size:10px;">✗ Skip</span>
-            {% else %}
-            <span style="color:var(--muted); font-size:11px;">No cache</span>
-            {% endif %}
-          </td>
-          <td style="font-size:10px; color:var(--muted); max-width:160px;">
-            {{ s.flow_signal|default:"—"|truncatechars:35 }}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div style="margin-top:10px; font-size:11px; color:var(--muted); display:flex; gap:20px; flex-wrap:wrap;">
-  <span>🔥 = active SMC signal today</span>
-  <span><strong style="color:var(--text);">Flow</strong> shown from 24h broker cache only — no quota spent on
-    watchlist</span>
-  <span><strong style="color:var(--text);">Volume</strong> ratio vs 10-day average</span>
-</div>
-
-<script>
-  function filterWatchlist(q) {
-    q = q.trim().toUpperCase();
-    document.querySelectorAll('#wlBody tr').forEach(row => {
-      const ticker = row.dataset.ticker || '';
-      row.style.display = (!q || ticker.includes(q)) ? '' : 'none';
-    });
-  }
-</script>
-{% endblock %}
+{% endif %}{% endblock %}

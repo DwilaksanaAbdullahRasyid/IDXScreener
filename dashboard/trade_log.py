@@ -67,6 +67,13 @@ def save_daily_signals(candidates: list, date_str: str | None = None) -> int:
     """
     Persist today's confirmed screener candidates to the daily log file.
     Tickers already present in the file keep their existing status (no overwrite).
+
+    Each entry includes backtest TP/SL levels so trades follow backtest strategy:
+      - Entry price at POI zone
+      - TP1/TP2/TP3: partial exits at 1R, 2R, 3R
+      - SL: stop loss below POI
+      - No EOD exit — trades held until TP/SL hit or MAX_HOLD exceeded
+
     Returns the number of NEW entries added.
     """
     if date_str is None:
@@ -84,20 +91,49 @@ def save_daily_signals(candidates: list, date_str: str | None = None) -> int:
             continue  # already tracked — don't overwrite status
 
         composite = cand.get("composite", {}) or {}
+
+        # Get backtest entry levels (from screener if available)
+        bt_entry = cand.get("backtest_entry", {})
+
+        # Fallback: compute from POI if backtest_entry not provided
+        if not bt_entry:
+            from .strategy_config import TP1_R, TP2_R, TP3_R, SL_FACTOR
+            entry_price = cand.get("price") or cand.get("close") or 0
+            poi_low = cand.get("poi_low") or cand.get("poi_4h", {}).get("low", 0)
+            poi_high = cand.get("poi_high") or cand.get("poi_4h", {}).get("high", 0)
+
+            if entry_price > 0 and poi_low > 0:
+                risk = entry_price - (poi_low * (1 - SL_FACTOR))
+                bt_entry = {
+                    "entry_price": entry_price,
+                    "tp1": entry_price + risk * TP1_R,
+                    "tp2": entry_price + risk * TP2_R,
+                    "tp3": entry_price + risk * TP3_R,
+                    "sl": poi_low * (1 - SL_FACTOR),
+                    "risk_amount": risk,
+                }
+
         entry = {
             "ticker":            ticker,
             "signal_date":       date_str,
             "logged_at":         now_str,
-            # Prices
-            "entry_price":       cand.get("entry_price") or cand.get("price") or cand.get("close"),
-            "sl":                cand.get("sl") or cand.get("stop_loss"),
-            "tp":                cand.get("tp") or cand.get("take_profit"),
-            "poi_low":           cand.get("poi_low"),
-            "poi_high":          cand.get("poi_high"),
+            # Prices — backtest TP/SL levels (replaces single TP)
+            "entry_price":       bt_entry.get("entry_price") or cand.get("price") or cand.get("close"),
+            "sl":                bt_entry.get("sl"),
+            "tp1":               bt_entry.get("tp1"),
+            "tp2":               bt_entry.get("tp2"),
+            "tp3":               bt_entry.get("tp3"),
+            "tp":                bt_entry.get("tp3"),  # fallback for legacy code
+            "poi_low":           cand.get("poi_low") or cand.get("poi_4h", {}).get("low"),
+            "poi_high":          cand.get("poi_high") or cand.get("poi_4h", {}).get("high"),
             "risk_pct":          cand.get("risk_pct"),
             # V3.9 Grade + Confluence (aligned with backtest grading system)
             "grade":             composite.get("grade", "D"),
             "confluence_score":  composite.get("confluence_score"),
+            # Backtest partial exit tracking
+            "tp1_hit":           False,
+            "tp2_hit":           False,
+            "tp3_hit":           False,
             "composite_score":   composite.get("composite_score"),
             "flow_confirmed":    bool(cand.get("flow", {}).get("eligible")) if isinstance(cand.get("flow"), dict) else False,
             # Signal context
@@ -194,7 +230,13 @@ def update_trade_statuses(date_str: str | None = None) -> list:
         t      = entry["ticker"]
         ep     = entry.get("entry_price") or 0
         sl     = entry.get("sl") or 0
-        tp     = entry.get("tp") or 0
+
+        # Backtest strategy: TP1/TP2/TP3 for partial exits
+        tp1    = entry.get("tp1") or 0
+        tp2    = entry.get("tp2") or 0
+        tp3    = entry.get("tp3") or 0
+        tp     = entry.get("tp") or tp3  # fallback for legacy code
+
         poi_lo = entry.get("poi_low") or 0
         poi_hi = entry.get("poi_high") or 0
 
@@ -214,20 +256,66 @@ def update_trade_statuses(date_str: str | None = None) -> list:
                 entry["updated_at"] = now_str
                 changed             = True
 
-        # OPEN → HIT_TP or HIT_SL
+        # OPEN → track partial exits (TP1/TP2/TP3) or SL
         if entry["status"] == "OPEN":
-            if tp > 0 and day_high >= tp:
-                entry["status"]     = "HIT_TP"
-                entry["exit_price"] = tp
-                entry["pnl_r"]      = round((tp - ep) / max(ep - sl, 0.0001), 3) if sl > 0 else None
+            # Track which TPs have been hit (for partial exit reporting)
+            if tp1 > 0 and day_high >= tp1 and not entry.get("tp1_hit"):
+                entry["tp1_hit"] = True
                 entry["updated_at"] = now_str
-                changed             = True
+                changed = True
+
+            if tp2 > 0 and day_high >= tp2 and not entry.get("tp2_hit"):
+                entry["tp2_hit"] = True
+                entry["updated_at"] = now_str
+                changed = True
+
+            if tp3 > 0 and day_high >= tp3 and not entry.get("tp3_hit"):
+                entry["tp3_hit"] = True
+                entry["status"] = "HIT_TP"
+                entry["exit_price"] = tp3
+                # Calculate P&L based on partial exits
+                # Assume 1/3 at TP1, 1/3 at TP2, 1/3 at TP3
+                if sl > 0:
+                    risk = ep - sl
+                    pnl = (
+                        ((tp1 - ep) / risk) * (1/3) +  # 1/3 at TP1
+                        ((tp2 - ep) / risk) * (1/3) +  # 1/3 at TP2
+                        ((tp3 - ep) / risk) * (1/3)    # 1/3 at TP3
+                    )
+                    entry["pnl_r"] = round(pnl, 3)
+                else:
+                    entry["pnl_r"] = round((tp3 - ep) / max(ep, 0.0001), 3)
+                entry["updated_at"] = now_str
+                changed = True
+
+            # Check for SL hit (stops out entire remaining position)
             elif sl > 0 and day_low <= sl:
-                entry["status"]     = "HIT_SL"
+                # If TP1/TP2 already hit, calculate partial P&L; otherwise full loss
+                if entry.get("tp2_hit"):
+                    # TP1 + TP2 hit, only 1/3 remaining at risk
+                    risk = ep - sl
+                    pnl = (
+                        ((tp1 - ep) / risk) * (1/3) +  # 1/3 at TP1
+                        ((tp2 - ep) / risk) * (1/3) +  # 1/3 at TP2
+                        (sl - ep) / risk * (1/3)       # 1/3 stopped at SL
+                    )
+                    entry["pnl_r"] = round(pnl, 3)
+                elif entry.get("tp1_hit"):
+                    # TP1 hit, 2/3 remaining at risk
+                    risk = ep - sl
+                    pnl = (
+                        ((tp1 - ep) / risk) * (1/3) +  # 1/3 at TP1
+                        (sl - ep) / risk * (2/3)       # 2/3 stopped at SL
+                    )
+                    entry["pnl_r"] = round(pnl, 3)
+                else:
+                    # No exits hit, full position stopped at SL
+                    entry["pnl_r"] = -1.0
+
+                entry["status"] = "HIT_SL"
                 entry["exit_price"] = sl
-                entry["pnl_r"]      = -1.0
                 entry["updated_at"] = now_str
-                changed             = True
+                changed = True
 
     # Mark remaining OPEN trades as EXPIRED if market is closed (after 16:05 WIB)
     now_local = datetime.datetime.now()
