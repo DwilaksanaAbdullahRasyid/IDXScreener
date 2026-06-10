@@ -15,6 +15,8 @@ urlpatterns = [
     # APIs
     path('api/backtest/',           views.api_backtest,    name='api_backtest'),
     path('api/backtest_dual/',      views.api_backtest_dual, name='api_backtest_dual'),
+    path('api/backtest-async/start/',  views.api_backtest_async_start, name='api_backtest_async_start'),
+    path('api/backtest-async/status/', views.api_backtest_async_status, name='api_backtest_async_status'),
     path('api/status/',             views.api_status,      name='api_status'),
     path('api/trade-log/',          views.api_trade_log,   name='api_trade_log'),
 ]

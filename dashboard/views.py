@@ -1,6 +1,7 @@
 import json
 import time
 import datetime
+import threading
 from pathlib import Path
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
@@ -59,7 +60,6 @@ def _transform_backtest_metrics(metrics):
 
 def landing_page(request):
     """STIX landing page — first impression before the dashboard."""
-    from dashboard.backtest_dual import run_dual_backtest
     from dashboard.strategy_config import format_strategy_summary, BACKTEST_BASELINE, NON_FCA_BASELINE, FCA_ADDITION
 
     ihsg = analysis.fetch_ihsg()
@@ -67,14 +67,25 @@ def landing_page(request):
     summary = tl.get_summary_stats(days=30)
     recent_trades = tl.get_trade_log_history(days=7)[:5]  # last 5 signals
 
-    # Fetch backtest metrics (uses cache, no re-run unless forced)
+    # Load cached backtest only — do NOT compute on landing page load
+    bt_results = None
     try:
-        bt_results = run_dual_backtest(force=False)
+        from pathlib import Path
+        cache_file = Path(__file__).resolve().parent.parent / "backtest_dual_cache.json"
+        if cache_file.exists() and (time.time() - cache_file.stat().st_mtime) < 86400:  # < 24h old
+            with open(cache_file) as f:
+                bt_results = json.load(f)
+    except Exception:
+        pass
+
+    # Use cached results or fallback to baseline
+    if bt_results:
         bt_metrics = bt_results.get("metrics", {})
         combined_metrics = _transform_backtest_metrics(bt_metrics.get("combined", BACKTEST_BASELINE))
         non_fca_metrics = _transform_backtest_metrics(bt_metrics.get("non_fca", NON_FCA_BASELINE))
         fca_metrics = _transform_backtest_metrics(bt_metrics.get("fca", FCA_ADDITION))
-    except Exception:
+    else:
+        # Cache missing or stale — use baseline metrics (don't compute)
         combined_metrics = _transform_backtest_metrics(BACKTEST_BASELINE)
         non_fca_metrics = _transform_backtest_metrics(NON_FCA_BASELINE)
         fca_metrics = _transform_backtest_metrics(FCA_ADDITION)
@@ -264,6 +275,89 @@ def api_backtest_dual(request):
             "error": str(e),
             "traceback": traceback.format_exc()
         }, status=500)
+
+
+# ── Async Backtest Execution ──────────────────────────────────────────────────
+# Global status dict for background backtest progress
+backtest_status = {
+    "running": False,
+    "progress": 0,
+    "message": "Ready",
+    "result": None,
+    "error": None
+}
+
+
+def _run_backtest_thread():
+    """Run backtest in background thread."""
+    global backtest_status
+    try:
+        backtest_status["running"] = True
+        backtest_status["progress"] = 0
+        backtest_status["message"] = "Starting backtest..."
+
+        from dashboard.backtest_dual import run_dual_backtest
+        result = run_dual_backtest(force=True)
+
+        backtest_status["result"] = result
+        backtest_status["progress"] = 100
+        backtest_status["message"] = "Complete"
+        backtest_status["error"] = None
+    except Exception as e:
+        backtest_status["error"] = str(e)
+        backtest_status["message"] = f"Error: {str(e)[:100]}"
+    finally:
+        backtest_status["running"] = False
+
+
+@require_GET
+def api_backtest_async_start(request):
+    """Start async backtest (non-blocking)."""
+    global backtest_status
+
+    if backtest_status["running"]:
+        return JsonResponse({"error": "Backtest already running"}, status=400)
+
+    # Reset status and start thread
+    backtest_status = {
+        "running": True,
+        "progress": 5,
+        "message": "Initializing...",
+        "result": None,
+        "error": None
+    }
+
+    thread = threading.Thread(target=_run_backtest_thread, daemon=True)
+    thread.start()
+
+    return JsonResponse({"status": "started", "message": "Backtest running in background"})
+
+
+@require_GET
+def api_backtest_async_status(request):
+    """Check backtest status."""
+    global backtest_status
+
+    response = {
+        "running": backtest_status["running"],
+        "progress": backtest_status["progress"],
+        "message": backtest_status["message"],
+        "error": backtest_status["error"],
+    }
+
+    # If complete, include result
+    if not backtest_status["running"] and backtest_status["result"]:
+        m = backtest_status["result"]["metrics"]["combined"]
+        response["metrics"] = {
+            "total_trades": m["trades"],
+            "wins": m["wins"],
+            "losses": m["losses"],
+            "win_rate": m["wr"],
+            "total_r": m["total_r"],
+            "profit_factor": m.get("pf", 0),
+        }
+
+    return JsonResponse(response)
 
 
 @require_GET

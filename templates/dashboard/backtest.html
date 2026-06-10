@@ -351,11 +351,18 @@
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="btn" id="runBtn" onclick="loadBacktest(false)">▶ Load Results</button>
-    <button class="btn" id="forceBtn" onclick="loadBacktest(true)"
+    <button class="btn" id="rerunAsyncBtn" onclick="startBacktest()"
       style="background:var(--surface2); border:1px solid var(--border); color:var(--muted);">
-      ↺ Re-run
+      ↺ Re-run Backtest
     </button>
   </div>
+</div>
+
+<!-- Async backtest status spinner (hidden by default) -->
+<div id="backtest-spinner" class="card" style="display: none; text-align: center; padding: 32px; margin-bottom: 24px; background: var(--surface);">
+  <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+  <div id="spinner-message" style="font-size: 14px; color: var(--text); margin-bottom: 12px;">Running backtest...</div>
+  <div id="spinner-progress" style="font-size: 12px; color: var(--accent); margin-top: 8px;">0%</div>
 </div>
 
 <!-- Loading / Error banner -->
@@ -1010,6 +1017,82 @@
     document.getElementById('paramList').innerHTML = items.map(([k, v]) =>
       `<span class="param-badge">${k}: <strong>${v}</strong></span>`
     ).join('');
+  }
+
+  // ── Async Backtest Polling ────────────────────────────────────────────────
+  let backtest_poll_interval = null;
+
+  function startBacktest() {
+    const btn = document.getElementById('rerunAsyncBtn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+
+    // Show spinner
+    document.getElementById('backtest-spinner').style.display = 'block';
+    document.getElementById('spinner-message').textContent = 'Initializing backtest...';
+    document.getElementById('spinner-progress').textContent = '5%';
+
+    // Start async backtest
+    fetch('/api/backtest-async/start/')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          showError(data.error);
+          btn.disabled = false;
+          btn.textContent = '↺ Re-run Backtest';
+          return;
+        }
+
+        // Poll status every 2 seconds
+        pollBacktestStatus();
+        backtest_poll_interval = setInterval(pollBacktestStatus, 2000);
+      })
+      .catch(err => {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = '↺ Re-run Backtest';
+      });
+  }
+
+  function pollBacktestStatus() {
+    fetch('/api/backtest-async/status/')
+      .then(r => r.json())
+      .then(data => {
+        const btn = document.getElementById('rerunAsyncBtn');
+        const spinner = document.getElementById('backtest-spinner');
+
+        document.getElementById('spinner-progress').textContent = data.progress + '%';
+        document.getElementById('spinner-message').textContent = data.message;
+
+        if (data.error) {
+          showError(data.error);
+          spinner.style.display = 'none';
+          btn.disabled = false;
+          btn.textContent = '↺ Re-run Backtest';
+          clearInterval(backtest_poll_interval);
+          return;
+        }
+
+        // Check if backtest is complete (not running and reached 100%)
+        if (!data.running && data.progress === 100) {
+          clearInterval(backtest_poll_interval);
+          spinner.style.display = 'none';
+          btn.disabled = false;
+          btn.textContent = '↺ Re-run Backtest';
+
+          // Backtest complete — reload the results
+          if (window.loadBacktest) {
+            loadBacktest(false);  // Load the newly cached results
+          } else {
+            location.reload();
+          }
+        }
+      })
+      .catch(err => console.error('Status poll error:', err));
+  }
+
+  function showError(message) {
+    alert('Backtest error: ' + message);
   }
 
   // Auto-load on page ready
