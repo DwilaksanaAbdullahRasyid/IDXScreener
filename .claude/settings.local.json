@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Read(//d/SCREENER PROJECT/dashboard/**)",
+      "Read(//d/SCREENER PROJECT/**)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('dashboard/backtest.py'\\).read\\(\\)\\); print\\('backtest.py: OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('dashboard/views.py'\\).read\\(\\)\\); print\\('views.py: OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('dashboard/urls.py'\\).read\\(\\)\\); print\\('urls.py: OK'\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('dashboard/backtest.py'\\).read\\(\\)\\); print\\('backtest.py OK'\\); ast.parse\\(open\\('dashboard/views.py'\\).read\\(\\)\\); print\\('views.py OK'\\); ast.parse\\(open\\('dashboard/urls.py'\\).read\\(\\)\\); print\\('urls.py OK'\\)\")",
+      "Bash(venv/Scripts/python.exe -c ' *)"
+    ]
+  }
+}
